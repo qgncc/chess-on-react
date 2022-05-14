@@ -1,0 +1,9 @@
+.black_box{
+  @media(max-width: 745px){
+    width: 100%;
+    border-radius: 0;
+  }
+  padding: 3rem;
+  border-radius: 15px;
+  background-color: rgba(0,0,0,0.5);
+}

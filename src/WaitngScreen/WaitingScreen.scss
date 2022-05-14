@@ -1,0 +1,59 @@
+@use "../theme";
+
+.link_box{
+  @media(max-width: 322px){
+    flex-direction: column;
+  }
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  &__icon{
+    display:block;
+    padding: 1rem;
+  }
+  &__url{
+
+    div{
+      overflow: hidden;
+      width: 100%;
+    }
+
+    width: 100%;
+    box-sizing: border-box;
+
+    @media(max-width: 322px){
+      width: 100%;
+      border-radius: 0.33rem 0.33rem 0 0;
+
+    }
+    cursor: text;
+    color: theme.$dark_3;
+    background-color: theme.$light;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    border: 0.08rem theme.$light solid;
+    border-right: 0;
+    border-radius: 0.33rem 0 0 0.33rem;
+  }
+  &__copy_button{
+    cursor:pointer;
+    @media (max-width: 322px) {
+      width: 100%;
+      border-radius: 0 0 0.33rem 0.33rem;
+    }
+    font-size: 100%;
+    border:1px theme.$light solid;
+    border-radius: 0 0.33rem 0.33rem 0;
+    background-color: theme.$dark;
+    color: theme.$light;
+    &:hover{
+      background-color: theme.$dark_2;
+      color: theme.$light_2;
+      border-color: theme.$light;
+    }
+    &:active {
+      background-color: theme.$dark_3;
+    }
+  }
+}

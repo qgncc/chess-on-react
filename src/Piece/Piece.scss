@@ -1,0 +1,37 @@
+@each $piece in 'wp','wn','wb','wr','wq','wk','bp','bn','bb','br','bq','bk'{
+  .#{$piece}{
+    background-repeat: no-repeat;
+    background-image: url("../img/#{$piece}.png");
+  }
+}
+.piece{
+  width: 12.5%;
+  height: 12.5%;
+  background-size: 100%;
+  user-select: none;
+
+  position: absolute;
+  left:0;
+  top: 0;
+  overflow: hidden;
+
+  cursor: grab;
+  will-change: transform;
+  touch-action: none;
+}
+
+$row:0;
+@while $row < 8{
+  $col:0;
+  @while $col <8{
+
+    .square-#{$row+1}#{$col+1}{
+      transform: translate(#{$row*100%},#{(7-$col)*100%})
+    }
+    .flipped .square-#{$row+1}#{$col+1}{
+      transform: translate(#{(7-$row)*100%},#{($col)*100%})
+    }
+    $col:$col+1;
+  }
+  $row: $row+1;
+}

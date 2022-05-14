@@ -1,0 +1,9 @@
+@use "theme.scss" as theme;
+
+.wrapper{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: theme.$dark_bg;
+}

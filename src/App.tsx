@@ -1,26 +1,45 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, {useState} from 'react';
+import ChessBoard from "./ChessBoard/ChessBoard";
+import "./App.scss";
+import {CreateRoomScreen} from "./CreateRoomScreen/CreateRoomScreen";
+import {
+    BrowserRouter as Router,
+    Routes,
+    Route,
+    Link,
+    useParams
+} from "react-router-dom";
+import {createConnectionController} from "./connection/connection";
+
+
+
+// const host = "chess.qgncc.com/";
+// const ws = new WebSocket(host);
+// const controller = createConnectionController(ws);
+
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+
+    return (
+        <div className = "wrapper">
+
+        <Routes>
+            <Route path={":gameID"}
+                   element={<ChessBoard
+                       color = "w"
+                       flipped = {false}
+                       // connection={controller}
+                   />}
+            />
+            <Route path={"/"}
+                   element={<CreateRoomScreen
+                       // connection={controller}
+                   />}
+            />
+        </Routes>
+
+      </div>
+    );
 }
 
 export default App;
