@@ -113,8 +113,9 @@ let ChessBoard = function (props: ChessBoardProps) {
         return result;
     }
     function makeMove(move: NumericMove) {
+	console.log(state.side);
         if(!state.isConnectionOpen) return;
-        if(state.side !== ChessEngine.turn()) return null;
+        if(state.side !== ChessEngine.turn()) return;
         if(isPromotion(move) && move.promotion === undefined){
             promotionMove = move;
             openPromotionWindow(move.to.file);
