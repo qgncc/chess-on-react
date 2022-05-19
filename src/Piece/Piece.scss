@@ -19,7 +19,9 @@
   will-change: transform;
   touch-action: none;
 }
-
+.dragging{
+  z-index: 10;
+}
 $row:0;
 @while $row < 8{
   $col:0;

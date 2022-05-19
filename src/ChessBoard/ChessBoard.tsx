@@ -1,6 +1,6 @@
 import Piece from "../Piece/Piece";
 import "./ChessBoard.scss";
-import React, {MouseEvent, useRef, useState} from "react";
+import React, {MouseEvent, useEffect, useRef, useState} from "react";
 import {
     AlgebraicMove,
     AlgebraicNotation,
@@ -10,7 +10,8 @@ import {
     Indexes,
     NumericMove,
     PieceType,
-    Square
+    Square,
+    GameObject
 } from "../types";
 import ChessTypes from 'chess.js';
 import {PromotionWindow} from "../PromotionWindow/PromotionWindow";
@@ -18,32 +19,50 @@ import ChessEngineTypes from "chess.js";
 import {useParams} from "react-router";
 import Adaptive from "../Adaptive/Adaptive";
 import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
-import {connectionController} from "../connection/connection";
+import {MoveEvent} from "../WebSocketMessages";
+import {VictoryPrompt} from "../VictoryPrompt/VictoryPrompt";
+import {RematchEvent} from "../connection/connection";
 const Chess = require('chess.js');
 
 
 interface ChessBoardProps{
-    color: Color,
-    flipped: boolean,
-    // connection: connectionController
+    flipped: boolean;
+    GameObject: GameObject;
 }
 const ChessEngine = Chess();
 let promotionMove: NumericMove;
+let selectedPiece: {square:Square, piece: ChessTypes.Piece}|null;
+
+
 
 let ChessBoard = function (props: ChessBoardProps) {
-    let flipped = props.flipped;
+    let {state, dispatch, connection} = props.GameObject
+
     let [position, setPosition] = useState(ChessEngine.board());
-    let [isFlipped, setFlippedFlag] = useState(flipped);
+    let [isFlipped, setFlippedFlag] = useState(props.flipped);
     let [promotionWindowSetup, setPromotionWindowSetup] = useState({isOpen: false, file: 0});
-    let pieceSizeInPercent = 0.125;
+    let [isVictory, setIsVictory] = useState(false);
+
     let ref = useRef() as React.MutableRefObject<HTMLDivElement>;
     let pieces: JSX.Element[] = [];
-    let selectedPiece: {square:Square, piece: ChessTypes.Piece}|null;
-    let playerSide: Color = props.color;
-    let {gameID} = useParams();
-    let [isConnected, setIsConnected] = useState(false);
-    console.log(gameID);
+
+    const pieceSizeInPercent = 0.125;
+    const playerSide: Color = state.side!;
+
+    useEffect(()=>{
+        connection.onMove((event: MoveEvent)=>{
+            updateBoard(event.move);
+        });
+        connection.onRematch((event: RematchEvent)=>{
+            ChessEngine.reset();
+            setIsVictory(false)
+            setPosition(ChessEngine.board());
+            setFlippedFlag(event.side !== "w");
+            dispatch({type:"rematch", side: event.side})
+        });
+    },[]);
     function handlePointerUp(event: MouseEvent<HTMLDivElement>) {
+        if(isVictory) return;
         let globalCoords = {x: event.clientX, y: event.clientY};
         let boardCoords = getBoardCoordsFromGlobal(globalCoords);
         let clickedSquare = getSquareByBoardCoords(boardCoords);
@@ -54,6 +73,7 @@ let ChessBoard = function (props: ChessBoardProps) {
     }
 
     function handlePointerDown(event: MouseEvent<HTMLDivElement>){
+        if(isVictory) return;
         let globalCoords = {x: event.clientX, y: event.clientY};
         let boardCoords = getBoardCoordsFromGlobal(globalCoords);
         let clickedSquare = getSquareByBoardCoords(boardCoords);
@@ -82,16 +102,31 @@ let ChessBoard = function (props: ChessBoardProps) {
 
 
     }
+    function updateBoard(move: NumericMove) {
+        let result = ChessEngine.move(moveToAlgebraic(move));
+        if (result) {
+            setPosition(ChessEngine.board());
+        }
+        if(ChessEngine.game_over()){
+            setIsVictory(true);
+            //TODO reason;
+            dispatch({type:"game_over", reason:"todo"});
+        }
+        return result;
+    }
     function makeMove(move: NumericMove) {
+        if(!state.isConnectionOpen) return;
         // if(playerSide !== ChessEngine.turn()) return null;
-        if(isPromotion(move)){
+        if(isPromotion(move) && move.promotion === undefined){
             promotionMove = move;
             openPromotionWindow(move.to.file);
             return;
         }
-        let result = ChessEngine.move(moveToAlgebraic(move));
-        if (result) setPosition(ChessEngine.board());
+        let result = updateBoard(move);
+        if(result) dispatch({type:"move", move});
         console.log(ChessEngine.ascii())
+        if(result)selectedPiece = null;
+
         return result;
     }
     function hasFigureOnSquare(square:Square):boolean{
@@ -171,14 +206,18 @@ let ChessBoard = function (props: ChessBoardProps) {
 
         selectedPiece = {square, piece}
         pieceHTML &&  setPieceHTMLPosInBoardCoords(pieceHTML, coords);
+        pieceHTML &&  pieceHTML.classList.add("dragging");
         function onDrag(event: MouseEventInit) {
             let globalCoords: Coords = {x:event.clientX!, y:event.clientY!};
             let coords = getBoardCoordsFromGlobal(globalCoords);
-            pieceHTML && drag(pieceHTML, coords);
+            if(pieceHTML){
+                drag(pieceHTML, coords);
+            }
         }
         function stopDrag() {
             document.removeEventListener("pointermove",onDrag);
             pieceHTML && pieceHTML.style && (pieceHTML.style.transform = "");
+            pieceHTML && pieceHTML.classList.remove("dragging");
         }
         document.addEventListener("pointermove", onDrag);
         document.addEventListener("pointerup",
@@ -188,6 +227,7 @@ let ChessBoard = function (props: ChessBoardProps) {
     }
     function drag(pieceHTML: HTMLDivElement, coords: Coords) {
         setPieceHTMLPosInBoardCoords(pieceHTML, coords);
+
     }
     function setPieceHTMLPosInBoardCoords(pieceHTML: HTMLDivElement, coords: Coords) {
         let boardWidth = ref.current.offsetWidth;
@@ -233,6 +273,7 @@ let ChessBoard = function (props: ChessBoardProps) {
         if(!type) return;
         setPromotionWindowSetup({isOpen: false, file: 0});
         promotionMove.promotion = type[1] as PieceType;
+        makeMove(promotionMove)
         ChessEngine.move(moveToAlgebraic(promotionMove));
         setPosition(ChessEngine.board());
         console.log(ChessEngine.ascii())
@@ -253,27 +294,28 @@ let ChessBoard = function (props: ChessBoardProps) {
         }
     }
     return(
-        <>
-            {isConnected?
-            <Adaptive>
-                <div ref = {ref} onPointerUp={handlePointerUp} onPointerDown={handlePointerDown} className = "chessboard">
-                    {promotionWindowSetup.isOpen ?
-                        (<PromotionWindow position={calculatePromotionWindowPosition()}
-                                          color={playerSide}
-                                          file={promotionWindowSetup.file as ChessNumbers}>
-                            <Piece isPromotion={true} type="b" color={props.color} onMouseDown={promotion}/>
-                            <Piece isPromotion={true} type="n" color={props.color} onMouseDown={promotion}/>
-                            <Piece isPromotion={true} type="r" color={props.color} onMouseDown={promotion}/>
-                            <Piece isPromotion={true} type="q" color={props.color} onMouseDown={promotion}/>
-                        </PromotionWindow>) :
-                        null}
-                    {pieces}
-                </div>
-            </Adaptive>
-                :
-            <WaitingScreen gameID={gameID}/>}
-        </>
+        <Adaptive>
+            <div ref = {ref} onPointerUp={handlePointerUp} onPointerDown={handlePointerDown} className = "chessboard">
+                {
+                    isVictory && <VictoryPrompt sendRematchReq={()=>dispatch({type:"rematch_request"})} reason={"hello"}/>
+                }
+                {
+                    promotionWindowSetup.isOpen ?
+                    (<PromotionWindow position={calculatePromotionWindowPosition()}
+                                      color={playerSide}
+                                      file={promotionWindowSetup.file as ChessNumbers}>
+                        <Piece isPromotion={true} type="b" color={state.side!} onMouseDown={promotion}/>
+                        <Piece isPromotion={true} type="n" color={state.side!} onMouseDown={promotion}/>
+                        <Piece isPromotion={true} type="r" color={state.side!} onMouseDown={promotion}/>
+                        <Piece isPromotion={true} type="q" color={state.side!} onMouseDown={promotion}/>
+                    </PromotionWindow>)
+                        :
+                    null
+                }
+                {pieces}
 
+            </div>
+        </Adaptive>
     );
 }
 

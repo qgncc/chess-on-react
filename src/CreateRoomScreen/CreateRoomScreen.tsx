@@ -1,33 +1,25 @@
 import "./CreateRoomScreen.scss"
-import {Color, Props} from "../types";
+import {Color, GameObject, Props} from "../types";
 import {BlackBox} from "../BlackBox/BlackBox";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import { v4 } from 'uuid';
-import {ChangeEvent, useState} from "react";
-import {connectionController} from "../connection/connection";
+import {ChangeEvent, MouseEvent, useEffect, useState} from "react";
 
 interface CreateRoomScreenProps extends Props{
-    // connection: connectionController
+    GameObject: GameObject;
 }
-
 export function CreateRoomScreen(props: CreateRoomScreenProps) {
+    let {state, dispatch} = props.GameObject
     let className = props.className? props.className:"";
-    let [checked, setChecked] = useState("any");
+    let [checked, setChecked] = useState<Color|"any">("any");
     function onChange(event: ChangeEvent<HTMLDivElement>) {
-        setChecked(event.target.id);
+        setChecked(event.target.id as Color|"any");
     }
-    function onClick(){
+    function onClick(event:MouseEvent<HTMLButtonElement>){
+        event.preventDefault();
         let roomID = v4();
-        let color: Color;
-        if(checked === "any"){
-            color = (Math.random()>0.5)?"w":"b";
-        }else{
-            color = checked as Color;
-        }
-        // props.connection.createRoom(roomID,color);
-        return roomID;
+        dispatch({type: "create_room", roomID, checked})
     }
-
     return(
         <BlackBox className={className}>
             <form action="" className="options">
@@ -59,12 +51,16 @@ export function CreateRoomScreen(props: CreateRoomScreenProps) {
                 <label htmlFor="b" className="options__option bk"/>
 
 
-                <Link to={onClick()} state={{ fromDashboard: true }}>
-                    <button className="button button--margin--15 button--corners--rounded">
+                {
+                    state.isConnectionOpen?
+                    <button onClick={onClick} className="button button--margin--15 button--corners--rounded">
                         Create room
                     </button>
-                </Link>
-
+                        :
+                    <button disabled={true} className="button button--blocked button--margin--15 button--corners--rounded">
+                        Waiting for connection...
+                    </button>
+                }
             </form>
         </BlackBox>
     )

@@ -8,7 +8,15 @@
   color: #fff;
   font-family: Comfortaa, sans-serif;
   text-decoration: none;
-
+  &--blocked{
+    background-color: #232323;
+    color: #484848;
+  }
+  &.button--blocked:hover{
+    cursor: inherit;
+    background-color: #232323;
+    color:#484848;
+  }
   &--margin--15{
     margin: 15px;
   }

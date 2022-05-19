@@ -1,131 +1,210 @@
 import {Color, NumericMove} from "../types";
-import {Move} from "chess.js";
+import {GameStartedEvent, MoveEvent, RoomCreatedEvent, RoomJoinedEvent} from "../WebSocketMessages";
 
-interface ChessEvent {
-    type: string,
-    roomID: string
+export interface ConnectionControllerOptions{
+    max_delay?: number,
+    min_delay?: number,
+    time_factor?: number,
 }
-interface RoomJoinedEvent{
-    side: string
-}
-interface MoveEvent extends ChessEvent{
-    move: NumericMove
+export interface RematchEvent{
+    side:Color
 }
 
-export interface connectionController{
-    onConnection:(event: Event)=>void,
-    onRoomJoined:(event: RoomJoinedEvent)=>void,
-    onMove:(event: MoveEvent)=>void
-    onGameStart: ()=>void,
-    sendMove:(move: NumericMove)=>void,
-    declareEndOfGame(status:number):void,
-    createRoom(id: string, roomCreatorColor: Color):void,
-    joinRoom(join_roomID: string, side?: Color | "any"):void
+export interface ConnectionController{
+    declareEndOfGame: (state: number, roomID: string, side: Color) => void;
+    isOpen: boolean;
+    joinRoom: (roomID: string, side?: (Color | "any")) => void;
+    onConnection: (fn: (event: Event) => void, once?:true) => void;
+    onClose: (fn: (event: Event) => void, once?:true) => void;
+    createRoom: (roomID: string) => void;
+    sendMove: (move: NumericMove, roomID: string, side: Color) => void;
+    onRoomCreated: (fn: (event: RoomCreatedEvent) => void) => void;
+    onRoomJoined: (fn: (event: RoomJoinedEvent) => void) => void;
+    onMove: (fn: (event: MoveEvent) => void) => void;
+    onGameStart: (fn: (event: GameStartedEvent) => void) => void;
+    onRematch: (fn: (event: RematchEvent) => void) => void;
+    host: string,
+    sendRematchReq:(roomID: string, side: Color) => void,
 }
+declare global {
+    interface Window { chessConnection: ConnectionController; }
+}
+export function connect(host: string, options?: ConnectionControllerOptions): ConnectionController{
+    if(window.chessConnection && window.chessConnection.host === host){
+        return window.chessConnection;
+    }
+    const min_delay = options?.min_delay || 1000;
+    const max_delay = options?.min_delay || 600000;
+    const time_factor = options?.time_factor || 1.5;
 
-export function createConnectionController(ws: WebSocket):connectionController {
-    let side: Color;
-    let roomID:string
-    let onConnection = function (event: Event) {
-        return;
+
+
+    let ws = new WebSocket(host);
+    let doOnRoomJoined:((event:RoomJoinedEvent)=>void)[] = []
+    let doOnMove:((event:MoveEvent)=>void)[] = []
+    let doOnGameStart:((event: GameStartedEvent)=>void)[] = []
+    let doOnRoomCreated:((event: RoomCreatedEvent)=>void)[] = []
+    let doOnRematch:((event: RematchEvent)=>void)[] =[]
+    ws.addEventListener("message", onMessage);
+    ws.addEventListener("close", ()=>setTimeout(reconnect,1000));
+    ws.addEventListener("open", ()=>{console.log("Connection is open")});
+    ws.addEventListener("close", ()=>{console.log("Connection is closed")});
+
+
+    function onConnection(fn:(event:Event)=>void, once?:true) {
+        ws.addEventListener("open", fn, {once:!!once});
     }
-    let onRoomJoined = function (event: RoomJoinedEvent) {
-        return;
+    function onClose(fn:(event:Event)=>void,once?:true) {
+        ws.addEventListener("close", fn,{once:!!once});
+    }
+    function onRoomJoined(fn: (event: RoomJoinedEvent) => void) {
+        console.log("room_joined")
+
+        doOnRoomJoined.push(fn);
+    }
+    function onRematch(fn: (event: RematchEvent) => void) {
+        doOnRematch.push(fn);
+    }
+    function onMove(fn: (event: MoveEvent) => void) {
+        doOnMove.push(fn);
+    }
+    function onGameStart(fn: (event: GameStartedEvent) => void) {
+        doOnGameStart.push(fn);
+    }
+    function onRoomCreated(fn: (event: RoomCreatedEvent) => void) {
+        doOnRoomCreated.push(fn);
     }
 
-    let onGameStart = function () {
-        return;
-    }
-    let onMove = function (event: MoveEvent) {
-        return;
-    }
 
     function onMessage(event: MessageEvent) {
         let message = JSON.parse(event.data);
+        console.log(message);
         if(message.type === "error"){
             console.log("Server sent error: ", message.message);
         }
         if(message.type === "room_joined"){
-            onRoomJoined(message)
+            _onRoomJoinedMessage(message)
         }
         if(message.type === "game_started"){
-            onGameStart();
+            _onGameStartMessage(message)
         }
         if(message.type === "room_created"){
-            joinRoom(message.roomID, side);
+            _onRoomCreatedMessage(message)
         }
-        if(message.type === "chess_move"){
-            onMove(message)
+        if(message.type === "move"){
+            _onMoveMessage(message)
+        }
+        if(message.type === "rematch"){
+            _onRematchMessage(message)
         }
     }
-    function sendMove(move: NumericMove ) {
+
+    function _onGameStartMessage(message: GameStartedEvent){
+        for (const fn of doOnGameStart) {
+            fn(message);
+        }
+    }
+    function _onRoomJoinedMessage(message: RoomJoinedEvent){
+        for (const fn of doOnRoomJoined) {
+            fn(message);
+        }
+    }
+    function _onRoomCreatedMessage(message: RoomCreatedEvent){
+        for (const fn of doOnRoomCreated) {
+            fn(message);
+        }
+    }
+    function _onRematchMessage(message: RematchEvent){
+        for (const fn of doOnRematch) {
+            fn(message);
+        }
+    }
+
+    function _onMoveMessage(message: MoveEvent){
+        console.log(doOnMove);
+        for (const fn of doOnMove) {
+            fn(message);
+        }
+    }
+    function send(message: any, tryNumber = 0){
+        console.log("Trying to send message: ", message);
+        if(ws.readyState === ws.OPEN){
+            console.log("Success!")
+            ws.send(JSON.stringify(message));
+        }else{
+            console.log("Nope!")
+            let delay = Math.min(
+                min_delay+((Math.random()+0.1)*time_factor*tryNumber),
+                max_delay*(Math.random()+0.1)
+            );
+            setTimeout(()=>send(message, tryNumber+1), delay)
+        }
+    }
+    function sendMove(move: NumericMove, roomID:string, side: Color) {
         let message = {
-            type:"chess_move",
-            roomID: roomID,
+            type:"move",
+            roomID,
             side,
             move
         };
-        console.log(side)
-        ws.send(JSON.stringify(message));
-    }
-    ws.addEventListener("open", onConnection);
-    ws.addEventListener("message", onMessage);
-    window.addEventListener('beforeunload', function (e) {
-        e.preventDefault();
-        e.returnValue = '';
-        ws.send(JSON.stringify({type:"surrender", side, roomID: roomID}));
-    });
-
-    function declareEndOfGame(state: number){
-        if(!roomID) console.log("no room id")
-        ws.send(JSON.stringify({
-                "type":"game_end",
-                "roomID": roomID,
-                "side":side,
-                "state": state
-            })
-        );
+        send(message);
     }
 
-    function createRoom(id: string, roomCreatorColor:Color){
-        side = roomCreatorColor;
-        roomID = id
-        ws.send(JSON.stringify({
+    function reconnect() {
+        ws = new WebSocket(host);
+    }
+    function declareEndOfGame(state: number, roomID: string, side: Color){
+        let message = {
+                type:"game_end",
+                roomID: roomID,
+                side: side,
+                state: state
+            };
+        send(message);
+    }
+    function createRoom(roomID: string){
+        let message = {
                 type:"create_room",
-                roomID,
-                color:roomCreatorColor
-            })
-        );
-
-
+                roomID: roomID,
+            }
+        send(message);
     }
-    function joinRoom(join_roomID: string, side:Color|"any" = "any"){
-        roomID = join_roomID;
-        ws.send(JSON.stringify({
-                "type":"join_room",
-                "roomID": join_roomID,
-                "side":side,
-            })
-        );
+    function joinRoom(roomID: string, side:Color|"any" = "any"){
+        let message = {
+            type:"join_room",
+            roomID: roomID,
+            side: side,
+        }
+        send(message);
     }
-
-    return {
-        set onConnection(value:(event: Event)=>void){
-            onConnection = value;
-        },
-        set onRoomJoined(value:(event: RoomJoinedEvent)=>void){
-            onRoomJoined = value;
-        },
-        set onMove(value:(event: MoveEvent)=>void){
-            onMove = value;
-        },
-        set onGameStart(value: ()=>void){
-            onGameStart = value;
-        },
+    function sendRematchReq(roomID: string, side:Color) {
+        let message = {
+            type:"rematch_request",
+            roomID: roomID,
+            side: side
+        }
+        send(message);
+    }
+    window["chessConnection"] = {
+        sendRematchReq,
+        host,
+        onRematch,
+        onRoomCreated,
+        onRoomJoined,
+        onMove,
+        onGameStart,
+        onConnection,
+        onClose,
         sendMove,
         declareEndOfGame,
         createRoom,
-        joinRoom
+        joinRoom,
+        get isOpen() {
+            return ws.readyState === ws.OPEN;
+        },
+        set isOpen(value: boolean){
+        }
 
-    }
+    };
+    return window.chessConnection;
 }

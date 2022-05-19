@@ -1,5 +1,7 @@
 import ChessEngine from "chess.js"
-import {ReactChild} from "react";
+import {Dispatch, ReactChild} from "react";
+import {NavigateFunction} from "react-router-dom";
+import {ConnectionController} from "./connection/connection";
 
 const chessNumbers = [1,2,3,4,5,6,7,8] as const
 const chessLetters = ['a','b','c','d','e','f','g','h'] as const
@@ -40,15 +42,6 @@ export type PieceClassName = 'br'|'bn'|'bb'|'bq'|'bk'|'bp'|'wr'|'wn'|'wb'|'wq'|'
 // export interface WhiteImgObj{p: "wp"; q: "wq"; r: "wr"; b: "wb"; k: "wk"; n: "wn" }
 // export interface BlackImgObj{p: "bp"; q: "bq"; r: "br"; b: "bb"; k: "bk"; n: "bn" }
 
-
-export interface ConnectHandler{
-    getRoomID: () => string | undefined;
-    socket: () => WebSocket;
-    side: () => Color;
-    createRoom: (side?: any) => void;
-    move: (move: NumericMove) => void;
-}
-
 export interface Square{
     file: ChessNumbers,
     rank: ChessNumbers
@@ -83,4 +76,21 @@ export interface Props {
     children?: ReactChild|ReactChild[],
     className?: string
 }
+//Game state
+export interface GameState {
+    roomID:string|undefined,
+    side: Color|undefined,
+    isGameStarted: boolean,
+    isConnectionOpen:boolean,
+}
+export type Action = {type:"create_room", roomID: string, checked: Color|"any"}
+    |{type:"join_room",roomID:string, side: Color|"any"}
+    |{type:"start_game"}
+    |{type:"change_connection_state", value: boolean}
+    |{type:"set_info", side: Color, roomID:string}
+    |{type:"move", move: NumericMove}
+    |{type:"game_over", reason: string}
+    |{type:"rematch_request"}
+    |{type:"rematch", side: Color};
 
+export type GameObject = {state:GameState, dispatch: Dispatch<Action>, connection: ConnectionController}
