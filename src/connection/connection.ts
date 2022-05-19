@@ -58,7 +58,6 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
         ws.addEventListener("close", fn,{once:!!once});
     }
     function onRoomJoined(fn: (event: RoomJoinedEvent) => void) {
-        console.log("room_joined")
 
         doOnRoomJoined.push(fn);
     }
@@ -121,7 +120,6 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
     }
 
     function _onMoveMessage(message: MoveEvent){
-        console.log(doOnMove);
         for (const fn of doOnMove) {
             fn(message);
         }

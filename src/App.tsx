@@ -67,11 +67,9 @@ function App() {
     useEffect(()=>{
         console.count('raz');
         connection.onConnection(function (event: Event){
-            console.log("connection");
             dispatch({type: "change_connection_state", value: true});
         });
         connection.onClose(function (event: Event){
-            console.log("close");
             dispatch({type: "change_connection_state", value: false});
         });
         connection.onRoomCreated(function (event: RoomCreatedEvent){

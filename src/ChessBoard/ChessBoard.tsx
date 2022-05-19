@@ -81,7 +81,6 @@ let ChessBoard = function (props: ChessBoardProps) {
         if(promotionWindowSetup.isOpen
             && !(event.target as HTMLDivElement).classList.contains("promotion-piece"))
         {
-            console.log("here");
             setPromotionWindowSetup({isOpen: false, file: 0});
         }
         if(hasFigureOnSquare(clickedSquare)){
@@ -91,7 +90,6 @@ let ChessBoard = function (props: ChessBoardProps) {
             }else{
                 let move:NumericMove = createMove(selectedPiece.square, clickedSquare);
                 let result = makeMove(move);
-                console.log(result);
                 if(!result) grabPieceAtCoords(pieceHTML as HTMLDivElement|null, boardCoords);
             }
         }else{
@@ -124,7 +122,6 @@ let ChessBoard = function (props: ChessBoardProps) {
         }
         let result = updateBoard(move);
         if(result) dispatch({type:"move", move});
-        console.log(ChessEngine.ascii())
         if(result)selectedPiece = null;
 
         return result;
@@ -276,7 +273,6 @@ let ChessBoard = function (props: ChessBoardProps) {
         makeMove(promotionMove)
         ChessEngine.move(moveToAlgebraic(promotionMove));
         setPosition(ChessEngine.board());
-        console.log(ChessEngine.ascii())
 
     }
 
