@@ -12,7 +12,7 @@ import {Lobby} from "./Lobby/Lobby";
 
 
 
-const host = "ws://chess.qgncc.com/ws";
+const host = "ws://localhost:8081/ws";
 const connection = connect(host);
 //TODO Вынести редюсер в отделльный файл, а то что это такое.
 let reducer: Reducer<GameState,Action> = function(state, action){

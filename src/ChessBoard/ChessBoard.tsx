@@ -58,6 +58,7 @@ let ChessBoard = function (props: ChessBoardProps) {
             setIsVictory(false)
             setPosition(ChessEngine.board());
             setFlippedFlag(event.side !== "w");
+            console.log("Rematch side", event.side);
             dispatch({type:"rematch", side: event.side})
         });
     },[]);
@@ -109,14 +110,13 @@ let ChessBoard = function (props: ChessBoardProps) {
         }
         if(ChessEngine.game_over()){
             setIsVictory(true);
-            //TODO reason;
             dispatch({type:"game_over", reason:"todo"});
         }
         return result;
     }
     function makeMove(move: NumericMove) {
         if(!state.isConnectionOpen) return;
-        // if(playerSide !== ChessEngine.turn()) return null;
+        if(state.side !== ChessEngine.turn()) return null;
         if(isPromotion(move) && move.promotion === undefined){
             promotionMove = move;
             openPromotionWindow(move.to.file);
