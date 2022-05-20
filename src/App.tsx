@@ -1,18 +1,18 @@
-import React, {Dispatch, Reducer, useEffect, useReducer, useState} from 'react';
+import React, { Reducer, useEffect, useReducer} from 'react';
 import "./App.scss";
 import {CreateRoomScreen} from "./CreateRoomScreen/CreateRoomScreen";
 import {
     Routes,
-    Route, useNavigate, Params,
+    Route, useNavigate,
 } from "react-router-dom";
 import {connect} from "./connection/connection";
 import {Action, GameState} from "./types";
-import {GameStartedEvent, MoveEvent, RoomCreatedEvent, RoomJoinedEvent} from "./WebSocketMessages";
+import {GameStartedEvent, RoomCreatedEvent, RoomJoinedEvent} from "./WebSocketMessages";
 import {Lobby} from "./Lobby/Lobby";
 
 
 
-const host = "ws://chess.qgncc.com/ws";
+const host = "wss://chess.qgncc.com/ws";
 const connection = connect(host);
 //TODO Вынести редюсер в отделльный файл, а то что это такое.
 let reducer: Reducer<GameState,Action> = function(state, action){
