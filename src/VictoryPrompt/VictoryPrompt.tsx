@@ -19,7 +19,10 @@ export function VictoryPrompt(props: VictoryPrompt) {
         <div onPointerDown={onMouseDown} className = "modal_wrapper">
             <div className = "modal_wrapper__victory-window">
                 <div className="modal__title">
-                    Victory!
+                    Game over!
+                </div>
+                <div className="modal__text">
+                    {props.reason}
                 </div>
                 {
                     isRematchSent?

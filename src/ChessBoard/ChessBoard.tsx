@@ -290,11 +290,31 @@ let ChessBoard = function (props: ChessBoardProps) {
             piece && pieces.push(piece);
         }
     }
+
+    function reason(){
+        if(ChessEngine.in_checkmate()){
+            let side_that_won = ChessEngine.turn() === "w"?
+                "Black":"White";
+            return side_that_won+" won by checkmate.";
+        }
+        if(ChessEngine.in_stalemate()){
+            return "Stalemate";
+        }
+        if(ChessEngine.in_threefold_repetition()){
+            return "Draw by repetition";
+        }
+        if(ChessEngine.insufficient_material()){
+            return "Draw. Not enough material";
+        }else{
+            console.log("Something went wrong. Game is not over");
+            return "";
+        }
+    }
     return(
         <Adaptive>
             <div ref = {ref} onPointerUp={handlePointerUp} onPointerDown={handlePointerDown} className = "chessboard">
                 {
-                    isVictory && <VictoryPrompt sendRematchReq={()=>dispatch({type:"rematch_request"})} reason={"hello"}/>
+                    isVictory && <VictoryPrompt sendRematchReq={()=>dispatch({type:"rematch_request"})} reason={reason()}/>
                 }
                 {
                     promotionWindowSetup.isOpen ?

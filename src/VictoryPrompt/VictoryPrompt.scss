@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&display=swap');
+
+//TODO Сделать это все по БЭМ.
 .modal_wrapper{
   width: 100%;
   height: 100%;
@@ -11,17 +13,20 @@
   top: 0;
   left: 0;
   &__victory-window{
+
     padding: 15px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     border: 1px #fff solid;
-    border-radius: 10%;
     background-color: #fff;
     color:#000;
+    border-radius: 15px;
 
-    width: 300px;
+    min-width: 250px;
+    max-width: 400px;
+    width: 100%;
     height: auto;
   }
 }
@@ -30,12 +35,18 @@
   margin-top:15px;
   margin-bottom:0;
   font-family: Comfortaa, cursive;
-  font-weight: bold;
-  font-size: 56px;
+  font-size: 40px;
   text-align: center;
+}
+.modal__text{
+  text-align: center;
+  font-size: 28px;
+  font-family: Nunito, sans-serif;
+  width: 100%;
 }
 .modal__button{
   font-size: 23px;
   font-family: Comfortaa, cursive;
   margin-top: 15px;
+  border-radius: 15px;
 }
