@@ -18,13 +18,13 @@
     bottom: 0;
     opacity: 0.5;
     &--selected_piece{
-      background-color: #d2d23f;
+      background-color: #ffff00;
     }
     &--previous_move_from{
-      background-color: #888828;
+      background-color: #ffff00;
     }
     &--previous_move_to{
-      background-color: #b2b235;
+      background-color: #ffff00;
     }
     &--hidden{
       display: none;

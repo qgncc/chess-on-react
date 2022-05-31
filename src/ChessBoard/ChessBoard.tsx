@@ -130,6 +130,7 @@ let ChessBoard = function (props: ChessBoardProps) {
             setPosition(ChessEngine.board());
             highlightedSquares.setSquareFrom(move.from);
             highlightedSquares.setSquareTo(move.to);
+            highlightedSquares.setSelectedPiece("none");
         }
         if(ChessEngine.game_over()){
             setIsVictory(true);
