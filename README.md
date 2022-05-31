@@ -9,4 +9,4 @@
 + Surrender button
 + Timer
 + Sound effect
-+ Highlight of previous move and selected piece
++ ~Highlight of previous move and selected piece~ ✓
