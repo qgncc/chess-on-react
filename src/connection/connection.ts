@@ -40,15 +40,18 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
 
 
     let ws = new WebSocket(host);
-    let doOnRoomJoined:((event:RoomJoinedEvent)=>void)[] = []
-    let doOnMove:((event:MoveEvent)=>void)[] = []
-    let doOnGameStart:((event: GameStartedEvent)=>void)[] = []
-    let doOnRoomCreated:((event: RoomCreatedEvent)=>void)[] = []
-    let doOnRematch:((event: RematchEvent)=>void)[] =[]
+    let doOnRoomJoined:((event:RoomJoinedEvent)=>void)[] = [];
+    let doOnMove:((event:MoveEvent)=>void)[] = [];
+    let doOnGameStart:((event: GameStartedEvent)=>void)[] = [];
+    let doOnRoomCreated:((event: RoomCreatedEvent)=>void)[] = [];
+    let doOnRematch:((event: RematchEvent)=>void)[] = [];
+    let ping = pinger();
+
+
     ws.addEventListener("message", onMessage);
     ws.addEventListener("close", ()=>setTimeout(reconnect,1000));
-    ws.addEventListener("open", ()=>{console.log("Connection is open")});
-    ws.addEventListener("close", ()=>{console.log("Connection is closed")});
+    ws.addEventListener("open", ping.start);
+    ws.addEventListener("close", ping.stop);
 
 
     function onConnection(fn:(event:Event)=>void, once?:true) {
@@ -149,7 +152,11 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
     }
 
     function reconnect() {
+        //TODO normal reconnect
         ws = new WebSocket(host);
+        if(ws.readyState !== ws.OPEN){
+            setTimeout(reconnect, 10000);
+        }
     }
     function declareEndOfGame(state: number, roomID: string, side: Color){
         let message = {
@@ -182,6 +189,27 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
             side: side
         }
         send(message);
+    }
+
+    function pinger(){
+        let interval: ReturnType<typeof setInterval>|null;
+        function ping() {
+            ws.send(JSON.stringify({type: "ping"}));
+        }
+
+        return {
+            start:function () {
+                if (interval) console.log("Already pinging")
+                else interval = setInterval(ping, 10000);
+            },
+            stop:function () {
+                if (!interval) console.log("Already stopped");
+                else {
+                    clearInterval(interval);
+                    interval = null;
+                }
+            }
+        }
     }
     window["chessConnection"] = {
         sendRematchReq,

@@ -1,4 +1,3 @@
-import * as t from "../types"
 import "./Piece.scss"
 import {Color, PieceType, Square} from "../types";
 import {MouseEventHandler} from "react";

@@ -58,6 +58,7 @@ let reducer: Reducer<GameState,Action> = function(state, action){
 
 function App() {
     const navigate = useNavigate();
+    //TODO custom hook
     let [state, dispatch] = useReducer(reducer,{
         roomID: undefined,
         side: undefined,

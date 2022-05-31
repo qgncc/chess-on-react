@@ -285,6 +285,7 @@ let ChessBoard = function (props: ChessBoardProps) {
             let pieceObj = position[i][j];
             let square = translateMatrixIndexesToSquare({x:j,y:i} as Indexes);
             const piece = pieceObj?
+                //TODO fix key
                 <Piece key = {10*i + j} color={pieceObj.color} type={pieceObj.type} square={square}/>:
                 null;
             piece && pieces.push(piece);
