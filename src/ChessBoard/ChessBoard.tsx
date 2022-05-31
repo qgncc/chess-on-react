@@ -22,6 +22,7 @@ import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
 import {MoveEvent} from "../WebSocketMessages";
 import {VictoryPrompt} from "../VictoryPrompt/VictoryPrompt";
 import {RematchEvent} from "../connection/connection";
+import {useSquareHighlight} from "../hooks/useSquarHighlight";
 const Chess = require('chess.js');
 
 
@@ -34,17 +35,36 @@ let promotionMove: NumericMove;
 let selectedPiece: {square:Square, piece: ChessTypes.Piece}|null;
 
 
+type HighLightedSquareType = "selected_piece"|"previous_move_from"|"previous_move_to";
+interface HighLightedSquareProps {
+    type:HighLightedSquareType,
+    square: Square|"none",
+}
+
+let HighlightedSquare = function (props: HighLightedSquareProps) {
+    let {square, type} = props;
+    let squarePos = square === "none"?""
+        :"square-"+square.file+square.rank+" ";
+    let squareType = square === "none"?" chessboard__highlighted_square--hidden"
+        :" chessboard__highlighted_square--"+type+" ";
+    return(
+        <div className={"chessboard__highlighted_square "
+            +squarePos
+            +squareType
+        }/>
+    );
+}
 
 let ChessBoard = function (props: ChessBoardProps) {
     let {state, dispatch, connection} = props.GameObject
 
     let [position, setPosition] = useState(ChessEngine.board());
-    let [isFlipped, setFlippedFlag] = useState(props.flipped);
     let [promotionWindowSetup, setPromotionWindowSetup] = useState({isOpen: false, file: 0});
     let [isVictory, setIsVictory] = useState(false);
-
+    let highlightedSquares = useSquareHighlight();
+    let isFlipped = props.flipped;
     let ref = useRef() as React.MutableRefObject<HTMLDivElement>;
-    let pieces: JSX.Element[] = [];
+    let  pieces: JSX.Element[] = [];
 
     const pieceSizeInPercent = 0.125;
     const playerSide: Color = state.side!;
@@ -55,13 +75,16 @@ let ChessBoard = function (props: ChessBoardProps) {
         });
         connection.onRematch((event: RematchEvent)=>{
             ChessEngine.reset();
+            highlightedSquares.reset();
             setIsVictory(false)
             setPosition(ChessEngine.board());
-            setFlippedFlag(event.side !== "w");
             console.log("Rematch side", event.side);
             dispatch({type:"rematch", side: event.side})
         });
     },[]);
+    useEffect(()=>{
+        isFlipped?ref.current.classList.add("flipped"):ref.current.classList.remove("flipped");
+    },[props.flipped]);
     function handlePointerUp(event: MouseEvent<HTMLDivElement>) {
         if(isVictory) return;
         let globalCoords = {x: event.clientX, y: event.clientY};
@@ -105,6 +128,8 @@ let ChessBoard = function (props: ChessBoardProps) {
         let result = ChessEngine.move(moveToAlgebraic(move));
         if (result) {
             setPosition(ChessEngine.board());
+            highlightedSquares.setSquareFrom(move.from);
+            highlightedSquares.setSquareTo(move.to);
         }
         if(ChessEngine.game_over()){
             setIsVictory(true);
@@ -201,7 +226,7 @@ let ChessBoard = function (props: ChessBoardProps) {
         let square = getSquareByBoardCoords(coords);
         let piece = getPieceBySquare(square);
         if(!piece) throw new Error(`No piece at square ${square}`);
-
+        if(ChessEngine.turn()===playerSide && playerSide === piece.color)highlightedSquares.setSelectedPiece(square);
         selectedPiece = {square, piece}
         pieceHTML &&  setPieceHTMLPosInBoardCoords(pieceHTML, coords);
         pieceHTML &&  pieceHTML.classList.add("dragging");
@@ -255,7 +280,7 @@ let ChessBoard = function (props: ChessBoardProps) {
         return {x,y} as Coords;
     }
     function translateMatrixIndexesToSquare({x, y}: Indexes): Square {
-        return isFlipped?{file: 8 -x , rank: y + 1} as Square:{file: x + 1, rank: 8 - y} as Square;
+        return {file: x + 1, rank: 8 - y} as Square;
 
     }
     function calculatePromotionWindowPosition() {
@@ -277,21 +302,6 @@ let ChessBoard = function (props: ChessBoardProps) {
 
     }
 
-
-
-
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            let pieceObj = position[i][j];
-            let square = translateMatrixIndexesToSquare({x:j,y:i} as Indexes);
-            const piece = pieceObj?
-                //TODO fix key
-                <Piece key = {10*i + j} color={pieceObj.color} type={pieceObj.type} square={square}/>:
-                null;
-            piece && pieces.push(piece);
-        }
-    }
-
     function reason(){
         if(ChessEngine.in_checkmate()){
             let side_that_won = ChessEngine.turn() === "w"?
@@ -311,6 +321,21 @@ let ChessBoard = function (props: ChessBoardProps) {
             return "";
         }
     }
+
+
+
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            let pieceObj = position[i][j];
+            let square = translateMatrixIndexesToSquare({x:j,y:i} as Indexes);
+            const piece = pieceObj?
+                //TODO fix key
+                <Piece key = {10*i + j} color={pieceObj.color} type={pieceObj.type} square={square}/>:
+                null;
+            piece && pieces.push(piece);
+        }
+    }
+
     return(
         <Adaptive>
             <div ref = {ref} onPointerUp={handlePointerUp} onPointerDown={handlePointerDown} className = "chessboard">
@@ -330,6 +355,15 @@ let ChessBoard = function (props: ChessBoardProps) {
                         :
                     null
                 }
+                <HighlightedSquare type="selected_piece"
+                                   square={highlightedSquares.selected_piece}
+                />
+                <HighlightedSquare type="previous_move_from"
+                                   square={highlightedSquares.previous_move_from}
+                />
+                <HighlightedSquare type="previous_move_to"
+                                   square={highlightedSquares.previous_move_to}
+                />
                 {pieces}
 
             </div>

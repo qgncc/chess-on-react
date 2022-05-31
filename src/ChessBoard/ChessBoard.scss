@@ -10,4 +10,24 @@
   background-repeat: no-repeat;
   background-image: url('../img/chessboard.png');
   background-size: 100%;
+  &__highlighted_square{
+    width: 12.5%;
+    height: 12.5%;
+    position: absolute;
+    top:0;
+    bottom: 0;
+    opacity: 0.5;
+    &--selected_piece{
+      background-color: #d2d23f;
+    }
+    &--previous_move_from{
+      background-color: #888828;
+    }
+    &--previous_move_to{
+      background-color: #b2b235;
+    }
+    &--hidden{
+      display: none;
+    }
+  }
 }
