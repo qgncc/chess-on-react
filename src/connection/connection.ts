@@ -34,7 +34,7 @@ export function connect(host: string, options?: ConnectionControllerOptions): Co
         return window.chessConnection;
     }
     const min_delay = options?.min_delay || 1000;
-    const max_delay = options?.min_delay || 600000;
+    const max_delay = options?.max_delay || 600000;
     const time_factor = options?.time_factor || 1.5;
 
 

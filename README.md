@@ -4,9 +4,10 @@
 + [chess.js](https://github.com/jhlywa/chess.js) for game logic    
 
 ### TODO:
-+  ~Ping for WebSocket~ ✓
++ ~Ping for WebSocket~ ✓
 + Draw by agreement
 + Surrender button
 + Timer
 + Sound effect
++ Reconnection
 + ~Highlight of previous move and selected piece~ ✓

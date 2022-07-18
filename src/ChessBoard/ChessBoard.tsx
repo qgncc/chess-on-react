@@ -16,9 +16,7 @@ import {
 import ChessTypes from 'chess.js';
 import {PromotionWindow} from "../PromotionWindow/PromotionWindow";
 import ChessEngineTypes from "chess.js";
-import {useParams} from "react-router";
 import Adaptive from "../Adaptive/Adaptive";
-import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
 import {MoveEvent} from "../WebSocketMessages";
 import {VictoryPrompt} from "../VictoryPrompt/VictoryPrompt";
 import {RematchEvent} from "../connection/connection";
@@ -84,7 +82,7 @@ let ChessBoard = function (props: ChessBoardProps) {
     },[]);
     useEffect(()=>{
         isFlipped?ref.current.classList.add("flipped"):ref.current.classList.remove("flipped");
-    },[props.flipped]);
+    },[isFlipped]);
     function handlePointerUp(event: MouseEvent<HTMLDivElement>) {
         if(isVictory) return;
         let globalCoords = {x: event.clientX, y: event.clientY};
