@@ -1,31 +1,43 @@
 import ChessBoard from "../ChessBoard/ChessBoard";
-import { GameObject } from "../types";
 import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
 import {useParams} from "react-router";
-import {useEffect} from "react";
+import { useChessBoard } from "../hooks/useChessBoard";
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { useChessGameManager } from "../hooks/useChessGameManager";
 
 interface LobbyProps{
-    GameObject: GameObject;
 }
 
 export function Lobby(props: LobbyProps) {
-    const {state, dispatch} = props.GameObject;
+    const wsURL = process.env.NODE_ENV === "development"?
+        "ws://localhost:8081/":"wss://chess.qgncc.com/"
     const {roomID} = useParams();
+    const location = useLocation();
+    const state = location.state as {isRoomCreator: boolean}
+    const {position, onDrop, onPromotion, chess} = useChessBoard();
+
+    const manager = useChessGameManager(wsURL);
+
     useEffect(()=>{
-        dispatch({type: "join_room", roomID: roomID!, side: "any"});
-    },[]);
+        if(!roomID) throw new Error("No roomID");
+        manager.joinRoom(roomID);
+    },[roomID]);
 
     return(
         <>
-            {
-            state.isGameStarted?
-                <ChessBoard
-                    flipped = {state.side !== "w"}
-                    GameObject = {props.GameObject}
+        {
+            state.isRoomCreator? 
+                manager.isGameStarted?
+                <ChessBoard onDrop={onDrop} 
+                            position={position}
+                            onPromotion={onPromotion}
                 />
                 :
-                <WaitingScreen roomID={roomID}/>
-            }
+                "Loading..."
+            :
+            <WaitingScreen roomID={roomID}/>
+        }
         </>
     );
 }

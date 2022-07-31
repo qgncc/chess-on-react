@@ -1,24 +1,23 @@
 import "./CreateRoomScreen.scss"
-import {Color, GameObject, Props} from "../types";
+import {Color, Props} from "../types";
 import {BlackBox} from "../BlackBox/BlackBox";
 import {Link, useNavigate} from "react-router-dom";
 import { v4 } from 'uuid';
 import {ChangeEvent, MouseEvent, useEffect, useState} from "react";
 
 interface CreateRoomScreenProps extends Props{
-    GameObject: GameObject;
 }
 export function CreateRoomScreen(props: CreateRoomScreenProps) {
-    let {state, dispatch} = props.GameObject
     let className = props.className? props.className:"";
     let [checked, setChecked] = useState<Color|"any">("any");
+    const navigate = useNavigate();
     function onChange(event: ChangeEvent<HTMLDivElement>) {
         setChecked(event.target.id as Color|"any");
     }
     function onClick(event:MouseEvent<HTMLButtonElement>){
         event.preventDefault();
         let roomID = v4();
-        dispatch({type: "create_room", roomID, checked})
+        navigate("../roomID", { replace: true, state: {isRoomCreator: true}});
     }
     return(
         <BlackBox className={className}>
@@ -51,16 +50,9 @@ export function CreateRoomScreen(props: CreateRoomScreenProps) {
                 <label htmlFor="b" className="options__option bk"/>
 
 
-                {
-                    state.isConnectionOpen?
-                    <button onClick={onClick} className="button button--margin--15 button--corners--rounded">
-                        Create room
-                    </button>
-                        :
-                    <button disabled={true} className="button button--blocked button--margin--15 button--corners--rounded">
-                        Waiting for connection...
-                    </button>
-                }
+                <button onClick={onClick} className="button button--margin--15 button--corners--rounded">
+                    Create room
+                </button>
             </form>
         </BlackBox>
     )
