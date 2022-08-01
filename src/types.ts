@@ -78,7 +78,7 @@ export interface NumericMove {
     to: Square,
     promotion?: PieceType,
 }
-export interface AlgebraicMove extends ChessEngine.Move{
+export interface AlgebraicMove extends ChessEngine.ShortMove{
 }
 
 export interface Rooks{

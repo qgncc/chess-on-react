@@ -6,7 +6,7 @@ interface Options extends useWebSocketWrapperOptions{
     exponentialBackOff?: true,
     maxReconnectionAttemps?: number;
     reconnectTime?: number,
-    minReconnectDelay: number,
+    minReconnectDelay?: number,
     maxReconnectDelay?: number,
     timeFactor?: number,
 }

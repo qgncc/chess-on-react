@@ -1,38 +1,57 @@
-import { useReducer } from "react";
+import { ShortMove } from "chess.js";
+import { useReducer, useRef, useState } from "react";
+import { Color } from "../types";
 import { useWebSocket } from "./useWebSocket";
 
 type IncomingMessage = {type: "move", move: string} 
                         |{type: "game_joined", roomID: string} 
-                        |{type: "game_started"} 
+                        |{type: "game_started", side: Color} 
                         |{type: "game_ended", reason: string}
 type OutgoingMessage = {type: "move", move: string}
                         |{type: "game_ended", reason: string}
 
-export function useChessGameManager(url: string){
+type UpdateBoardFunc = (move: ShortMove)=>boolean
+
+export function useChessGameManager(url: string, updateBoard: UpdateBoardFunc){
     
-    
-    
+    function stringMoveToObject(move: string) {
+        return{
+            from: move[0]+move[1],
+            to: move[2]+move[3],
+            promotion: move[4] || undefined,
+        } as ShortMove
+    }
+    let [gameStatus, setGameStatus] = useState<"joined"|"started"|"ended"|"created">("created")
+    let [isConnected, setIsConnected] = useState<boolean>(false)
+
     function onMessage(message: IncomingMessage) {
         switch (message.type) {
             case "game_joined":
-                
+                setGameStatus("joined")
                 break;
             case "game_started":
-                
+                setGameStatus("started")
                 break;
             case "game_ended":
-                
+                setGameStatus("ended")
                 break;
             case "move":
-                
+                const move = stringMoveToObject(message.move)
+                updateBoard(move)
                 break;
         
             default:
                 break;
         }
     }
-    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage)
-
+    function onClose(event: CloseEvent) {
+        setIsConnected(false)
+    }
+    function onOpen(event: Event) {
+        setIsConnected(true)
+    }
+    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen})
+    
 
     function joinRoom(roomID: string) {
         console.log("Joining room", roomID)
@@ -41,8 +60,7 @@ export function useChessGameManager(url: string){
 
     return{
         joinRoom,
-        get isGameStarted(){
-            return true
-        }
+        gameStatus,
+        isConnected,
     }
 }

@@ -1,6 +1,6 @@
 import {useRef, useCallback, useState} from "react"
 import { DropEvent } from "../ChessBoard/ChessBoard";
-import { Color, SquareObject } from "../types";
+import { AlgebraicMove, Color, SquareObject } from "../types";
 
 const Chess = require("chess.js");
 export function useChessBoard() {
@@ -14,8 +14,12 @@ export function useChessBoard() {
     const promotionPawn = useRef<HTMLDivElement|null>(null)
     const promotionSquares = useRef<{squareFrom:SquareObject, squareTo: SquareObject}|null>(null)
 
-
-    function drop(dropEvent: DropEvent) {
+    function updateBoard(move: AlgebraicMove) {
+        const newMove = chess.move(move);
+        if(newMove) setPosition(chess.board());
+        return !!newMove
+    }
+    function onDrop(dropEvent: DropEvent) {
         const squareFrom = dropEvent.initialSquare;
         const squareTo = dropEvent.dropSquare;
 
@@ -26,7 +30,6 @@ export function useChessBoard() {
         }
 
         function some(move: any){
-            console.log("Some move",move);
             return (move.to === squareTo.algebraic && move.flags.includes("p"));
         }
 
@@ -45,10 +48,9 @@ export function useChessBoard() {
             return false
         }
         console.log(newMove);
-        const move = chess.move(newMove)
-        setPosition(chess.board());
+        const result = updateBoard(newMove)
         console.log(chess.ascii());
-        return !!move;
+        return result;
     }
     function onPromotion(
         isCancled: boolean, 
@@ -57,9 +59,7 @@ export function useChessBoard() {
         if(!isCancled) {
             if(!promotionSquares.current) throw new Error("No promotion squares!");
             const {squareFrom: from, squareTo: to} = promotionSquares.current
-            const move = chess.move({from:from.algebraic, to: to.algebraic, promotion: piece?.type});
-            console.log({from:from.algebraic, to: to.algebraic, promotion: piece?.type});
-            setPosition(chess.board());
+            updateBoard({from:from.algebraic, to: to.algebraic, promotion: piece?.type});
             promotionPawn.current = null
         }else{
             promotionPawn.current && (promotionPawn.current.style.display = "block")
@@ -67,9 +67,9 @@ export function useChessBoard() {
     }
     return{
         position,
-        onPromotion: useCallback(onPromotion,[]),
-        onDrop: drop,
-        chess
+        onPromotion: useCallback(onPromotion,[chess, promotionPawn.current, promotionSquares.current]),
+        onDrop: useCallback(onDrop, [chess]),
+        updateBoard: useCallback(updateBoard, [chess])
     }
     
 }

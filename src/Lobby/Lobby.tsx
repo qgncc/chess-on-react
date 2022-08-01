@@ -15,9 +15,9 @@ export function Lobby(props: LobbyProps) {
     const {roomID} = useParams();
     const location = useLocation();
     const state = location.state as {isRoomCreator: boolean}
-    const {position, onDrop, onPromotion, chess} = useChessBoard();
+    const {position, onDrop, onPromotion, updateBoard} = useChessBoard();
 
-    const manager = useChessGameManager(wsURL);
+    const manager = useChessGameManager(wsURL, updateBoard);
 
     useEffect(()=>{
         if(!roomID) throw new Error("No roomID");
@@ -28,7 +28,7 @@ export function Lobby(props: LobbyProps) {
         <>
         {
             state.isRoomCreator? 
-                manager.isGameStarted?
+                manager.gameStatus === "started"?
                 <ChessBoard onDrop={onDrop} 
                             position={position}
                             onPromotion={onPromotion}
