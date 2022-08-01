@@ -1,6 +1,7 @@
 import ChessEngine from "chess.js"
 import {Dispatch, ReactChild} from "react";
 import {NavigateFunction} from "react-router-dom";
+import { Interface } from "readline";
 import {ConnectionController} from "./connection/connection";
 
 const chessNumbers = [1,2,3,4,5,6,7,8] as const
@@ -47,6 +48,20 @@ export interface Square{
     rank: ChessNumbers
 }
 
+export interface SquareObject{
+    algebraic: AlgebraicNotation
+    numeric: Square
+}
+
+export interface PieceObject{
+    type: PieceType,
+    color: Color
+}
+export interface PieceObjectExtended extends PieceObject{
+    square: Square,
+    htmlElement?: HTMLDivElement
+}
+
 export interface Indexes{
     x: Index,
     y: Index
@@ -63,7 +78,7 @@ export interface NumericMove {
     to: Square,
     promotion?: PieceType,
 }
-export interface AlgebraicMove extends ChessEngine.Move{
+export interface AlgebraicMove extends ChessEngine.ShortMove{
 }
 
 export interface Rooks{
@@ -77,20 +92,15 @@ export interface Props {
     className?: string
 }
 //Game state
-export interface GameState {
-    roomID:string|undefined,
-    side: Color|undefined,
-    isGameStarted: boolean,
-    isConnectionOpen:boolean,
-}
-export type Action = {type:"create_room", roomID: string, checked: Color|"any"}
-    |{type:"join_room",roomID:string, side: Color|"any"}
-    |{type:"start_game"}
-    |{type:"change_connection_state", value: boolean}
-    |{type:"set_info", side: Color, roomID:string}
-    |{type:"move", move: NumericMove}
-    |{type:"game_over", reason: string}
-    |{type:"rematch_request"}
-    |{type:"rematch", side: Color};
 
-export type GameObject = {state:GameState, dispatch: Dispatch<Action>, connection: ConnectionController}
+// export type Action = {type:"create_room", roomID: string, checked: Color|"any"}
+//     |{type:"join_room",roomID:string, side: Color|"any"}
+//     |{type:"start_game"}
+//     |{type:"change_connection_state", value: boolean}
+//     |{type:"set_info", side: Color, roomID:string}
+//     |{type:"move", move: NumericMove}
+//     |{type:"game_over", reason: string}
+//     |{type:"rematch_request"}
+//     |{type:"rematch", side: Color};
+
+// export type GameObject = {state:GameState, dispatch: Dispatch<Action>, connection: ConnectionController}

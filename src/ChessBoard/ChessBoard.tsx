@@ -1,36 +1,58 @@
 import Piece from "../Piece/Piece";
 import "./ChessBoard.scss";
-import React, {MouseEvent, useEffect, useRef, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {
-    AlgebraicMove,
     AlgebraicNotation,
-    ChessNumbers,
-    Color,
     Coords,
     Indexes,
-    NumericMove,
     PieceType,
     Square,
-    GameObject
+    PieceObjectExtended,
+    Color,
+    SquareObject,
+    ChessNumbers,
 } from "../types";
-import ChessTypes from 'chess.js';
-import {PromotionWindow} from "../PromotionWindow/PromotionWindow";
-import ChessEngineTypes from "chess.js";
 import Adaptive from "../Adaptive/Adaptive";
-import {MoveEvent} from "../WebSocketMessages";
-import {VictoryPrompt} from "../VictoryPrompt/VictoryPrompt";
-import {RematchEvent} from "../connection/connection";
 import {useSquareHighlight} from "../hooks/useSquarHighlight";
-const Chess = require('chess.js');
+import { PromotionWindow } from "../PromotionWindow/PromotionWindow";
+
+
+export type PromotionPiece = {type: "q"|"r"|"b"|"n", color: Color}
+
+export interface DropEvent{
+    type: PieceType, 
+    color: "w" | "b",
+    initialSquare: SquareObject, 
+    dropSquare: SquareObject, 
+    htmlElement?:HTMLDivElement|null,
+    openPromotionWindow: (
+        file: ChessNumbers, 
+        color: Color,
+        isAtTop: boolean,
+    )=>void
+}
 
 
 interface ChessBoardProps{
-    flipped: boolean;
-    GameObject: GameObject;
+    flipped?: boolean;
+    position: Array<Array<{ type: PieceType; color: "w" | "b" } | null>>
+    disabled?: boolean;
+    onPick?: (pickEvent: {
+        type: PieceType, 
+        color: "w" | "b",
+        square: SquareObject, 
+        htmlElement?:HTMLDivElement|null
+    })=>boolean;
+    onDrag?: (dragEvent: {
+        type: PieceType, 
+        color: "w" | "b",
+        htmlElement?:HTMLDivElement|null,
+        boardCoords: Coords,
+        globalCoords: Coords
+    })=>void;
+    onDrop: (dropEvent: DropEvent)=>boolean;
+    onPromotion:(isCancled: boolean, piece?: PromotionPiece)=>void
 }
-const ChessEngine = Chess();
-let promotionMove: NumericMove;
-let selectedPiece: {square:Square, piece: ChessTypes.Piece}|null;
 
 
 type HighLightedSquareType = "selected_piece"|"previous_move_from"|"previous_move_to";
@@ -54,115 +76,175 @@ let HighlightedSquare = function (props: HighLightedSquareProps) {
 }
 
 let ChessBoard = function (props: ChessBoardProps) {
-    let {state, dispatch, connection} = props.GameObject
-
-    let [position, setPosition] = useState(ChessEngine.board());
-    let [promotionWindowSetup, setPromotionWindowSetup] = useState({isOpen: false, file: 0});
-    let [isVictory, setIsVictory] = useState(false);
+    const {position, disabled, onDrop, onPromotion} = props
+    const onDrag = props.onDrag || (()=>{});
+    const onPick = props.onPick || (()=>true);
+    
+    let [promotionSetup, setPromotionWindowSetup] = useState(
+        {
+            isOpen: false, 
+            file: 1 as ChessNumbers,
+            color: "w" as Color,
+            isAtTop: true
+        }
+    );
     let highlightedSquares = useSquareHighlight();
     let isFlipped = props.flipped;
     let ref = useRef() as React.MutableRefObject<HTMLDivElement>;
-    let  pieces: JSX.Element[] = [];
+    let pieces: JSX.Element[] = [];
 
     const pieceSizeInPercent = 0.125;
-    const playerSide: Color = state.side!;
+    const selectedPiece = useRef<PieceObjectExtended|null>(null)
 
-    useEffect(()=>{
-        connection.onMove((event: MoveEvent)=>{
-            updateBoard(event.move);
-        });
-        connection.onRematch((event: RematchEvent)=>{
-            ChessEngine.reset();
-            highlightedSquares.reset();
-            setIsVictory(false)
-            setPosition(ChessEngine.board());
-            console.log("Rematch side", event.side);
-            dispatch({type:"rematch", side: event.side})
-        });
-    },[]);
+   
     useEffect(()=>{
         isFlipped?ref.current.classList.add("flipped"):ref.current.classList.remove("flipped");
     },[isFlipped]);
-    function handlePointerUp(event: MouseEvent<HTMLDivElement>) {
-        if(isVictory) return;
-        let globalCoords = {x: event.clientX, y: event.clientY};
-        let boardCoords = getBoardCoordsFromGlobal(globalCoords);
-        let clickedSquare = getSquareByBoardCoords(boardCoords);
-        if(selectedPiece){
-            let move:NumericMove = createMove(selectedPiece.square, clickedSquare);
-            makeMove(move);
-        }
-    }
 
-    function handlePointerDown(event: MouseEvent<HTMLDivElement>){
-        if(isVictory) return;
-        let globalCoords = {x: event.clientX, y: event.clientY};
-        let boardCoords = getBoardCoordsFromGlobal(globalCoords);
-        let clickedSquare = getSquareByBoardCoords(boardCoords);
-        if(promotionWindowSetup.isOpen
-            && !(event.target as HTMLDivElement).classList.contains("promotion-piece"))
-        {
-            setPromotionWindowSetup({isOpen: false, file: 0});
-        }
-        if(hasFigureOnSquare(clickedSquare)){
-            let pieceHTML = event.target === event.currentTarget? null:event.target;
-            if(!selectedPiece){
-                grabPieceAtCoords(pieceHTML as HTMLDivElement|null, boardCoords);
-            }else{
-                let move:NumericMove = createMove(selectedPiece.square, clickedSquare);
-                let result = makeMove(move);
-                if(!result) grabPieceAtCoords(pieceHTML as HTMLDivElement|null, boardCoords);
-            }
-        }else{
-            if(selectedPiece){
-                let move:NumericMove = createMove(selectedPiece.square, clickedSquare);
-                makeMove(move);
-            }
-        }
-
-
+    function handlePointerUp(event: PointerEvent) {
+        if(!selectedPiece.current) return
+        if(disabled) return;
+        const globalCoords = {x: event.clientX, y: event.clientY};
+        const boardCoords = getBoardCoordsFromGlobal(globalCoords);
+        const dropSquare = getSquareByBoardCoords(boardCoords);
+        const isDropped = dropPiece(
+            selectedPiece.current.type, 
+            selectedPiece.current.color,
+            selectedPiece.current.square,
+            dropSquare, 
+            selectedPiece.current.htmlElement
+        );
     }
-    function updateBoard(move: NumericMove) {
-        let result = ChessEngine.move(moveToAlgebraic(move));
-        if (result) {
-            setPosition(ChessEngine.board());
-            highlightedSquares.setSquareFrom(move.from);
-            highlightedSquares.setSquareTo(move.to);
-            highlightedSquares.setSelectedPiece("none");
-        }
-        if(ChessEngine.game_over()){
-            setIsVictory(true);
-            dispatch({type:"game_over", reason:"todo"});
-        }
-        return result;
+    function getPieceBySquare(square: Square): {color: "w"|"b", type: PieceType}|null {
+        const {x,y} = translateSquareToMatrixIndexes(square);
+        const piece = position[y][x];
+        
+        return piece;
     }
-    function makeMove(move: NumericMove) {
-	console.log(state.side);
-        if(!state.isConnectionOpen) return;
-        if(state.side !== ChessEngine.turn()) return;
-        if(isPromotion(move) && move.promotion === undefined){
-            promotionMove = move;
-            openPromotionWindow(move.to.file);
+    function handlePointerDown(event: React.PointerEvent<HTMLDivElement>){
+        if(disabled) return;
+        if(promotionSetup.isOpen){
+            console.log("Close prom window")
+            closePromotionWindow();
+            onPromotion(true);
             return;
         }
-        let result = updateBoard(move);
-        if(result) dispatch({type:"move", move});
-        if(result)selectedPiece = null;
+        const globalCoords = {x: event.clientX, y: event.clientY};
+        const boardCoords = getBoardCoordsFromGlobal(globalCoords);
+        const square = getSquareByBoardCoords(boardCoords);
+        const piece = getPieceBySquare(square);
+        const htmlElement = event.target as HTMLDivElement;
+        if(!selectedPiece.current){
+            if(ref.current === event.target) return;
+            if(!piece) return;
+            grabPiece(piece, square, htmlElement, boardCoords);
+        }else{
+            if(!piece){
+                dropPiece(
+                    selectedPiece.current.type, 
+                    selectedPiece.current.color, 
+                    selectedPiece.current.square,
+                    square, 
+                    selectedPiece.current.htmlElement
+                );
+            }else{
+                const isDropped = dropPiece(
+                    selectedPiece.current.type, 
+                    selectedPiece.current.color, 
+                    selectedPiece.current.square,
+                    square,
+                    selectedPiece.current.htmlElement
+                );
+                if(!isDropped) grabPiece(piece, square, htmlElement, boardCoords)
+            }
+        }
 
-        return result;
     }
-    function hasFigureOnSquare(square:Square):boolean{
-        return !!ChessEngine.get(toAlgebraic(square));
+
+    
+    function dropPiece(
+        type: PieceType,
+        color: Color,
+        initialSquare: Square, 
+        dropSquare: Square, 
+        htmlElement?: HTMLDivElement
+    ){
+        
+        const initialSquareObj: SquareObject = {
+            numeric: initialSquare,
+            algebraic: toAlgebraic(initialSquare),
+        }
+        const dropSquareObj: SquareObject = {
+            numeric: dropSquare,
+            algebraic: toAlgebraic(dropSquare),
+        }
+        if(initialSquareObj.algebraic === dropSquareObj.algebraic) return false;
+        if(onDrop({
+            type,
+            color, 
+            initialSquare: initialSquareObj, 
+            dropSquare: dropSquareObj, 
+            htmlElement,
+            openPromotionWindow
+        })
+        ){
+            selectedPiece.current = null;
+            return true;
+        }
+        return false;
     }
-    function isPromotion(move: NumericMove){
-        let isPromotion = false;
-        ChessEngine.moves({square:toAlgebraic(move.from), verbose:true})
-            .forEach((elem: ChessEngineTypes.Move)=>{
-                if(elem.to === toAlgebraic(move.to) && elem.hasOwnProperty("promotion") ){
-                    isPromotion = true;
-                }
-            });
-        return isPromotion;
+   
+    function grabPiece(
+        piece : {color: "w"|"b", type: PieceType}, 
+        square: Square, 
+        htmlElement: HTMLDivElement,
+        initialBoardCoords: Coords,
+    ){
+        const squareObject = {
+            algebraic: toAlgebraic(square),
+            numeric: square
+        }        
+        const pickEvent = {
+            ...piece,
+            square: squareObject,
+            htmlElement
+        }
+        if(onPick(pickEvent)){
+            selectedPiece.current = {
+                ...piece,
+                square,
+                htmlElement
+            };
+            startDrag(initialBoardCoords, selectedPiece.current);
+        }
+    }
+
+    function startDrag(initialBoardCoords: Coords, pieceObject: PieceObjectExtended) {
+        if(!pieceObject.htmlElement) return;
+        setPieceHTMLPosInBoardCoords(pieceObject.htmlElement, initialBoardCoords)
+        function drag(event: PointerEvent) {
+            if(!pieceObject.htmlElement) return;
+            const globalCoords: Coords = {x:event.clientX, y:event.clientY}
+            const boardCoords: Coords = getBoardCoordsFromGlobal(globalCoords)
+            pieceObject.htmlElement.classList.add("dragging")
+            setPieceHTMLPosInBoardCoords(pieceObject.htmlElement, boardCoords)
+            onDrag({type: pieceObject.type, 
+                    color:pieceObject.color,
+                    htmlElement: pieceObject.htmlElement,
+                    boardCoords, 
+                    globalCoords})
+        }
+        function stopDrag() {
+            if(!pieceObject.htmlElement) return;
+            document.removeEventListener("pointermove", drag);
+            pieceObject.htmlElement.classList.remove("dragging")
+            selectedPiece.current && pieceObject.htmlElement.removeAttribute("style");
+        }
+        document.addEventListener("pointermove", drag);
+        document.addEventListener("pointerup", (event: PointerEvent)=>{
+            stopDrag();
+            handlePointerUp(event);
+        }, {once: true});
     }
 
     function toNumeric(i: AlgebraicNotation): Square {
@@ -173,37 +255,36 @@ let ChessBoard = function (props: ChessBoardProps) {
         return ("abcdefgh".slice(i.file - 1, i.file) + i.rank.toString()) as AlgebraicNotation;
     }
 
-    function createMove(from: Square, to:Square, promotion?: PieceType):NumericMove {
-        return promotion? {from, to, promotion} as NumericMove:{from,to} as NumericMove;
+    // function openPromotionWindow(file:ChessNumbers) {
+    //     setPromotionWindowSetup({isOpen: true, file:file-1})
+    // }
+    function openPromotionWindow(
+        file: ChessNumbers,
+        color: Color,
+        isAtTop: boolean,
+    ){
+        setPromotionWindowSetup(
+            {
+                isOpen: true,
+                isAtTop,
+                color,
+                file
+            }
+        )
+
     }
-    function openPromotionWindow(file:ChessNumbers) {
-        setPromotionWindowSetup({isOpen: true, file:file-1})
+    function closePromotionWindow(){
+        setPromotionWindowSetup((prevState)=>{
+            return{
+                ...prevState,
+                isOpen: false
+            }
+        })
     }
-    function moveToAlgebraic(move:NumericMove):AlgebraicMove {
-        return move.promotion?
-                {
-                    from:toAlgebraic(move.from),
-                    to:toAlgebraic(move.to),
-                    promotion:move.promotion
-                } as AlgebraicMove
-            :
-                {
-                    from:toAlgebraic(move.from),
-                    to:toAlgebraic(move.to)
-                } as AlgebraicMove;
-    }
-    function moveToNumeric(move:AlgebraicMove):NumericMove {
-        return move.promotion?
-                {
-                    from:toNumeric(move.from),
-                    to:toNumeric(move.to),
-                    promotion:move.promotion
-                } as NumericMove
-            :
-                {
-                    from:toNumeric(move.from),
-                    to:toNumeric(move.to)
-                } as NumericMove;
+    
+    function onPromotionWrapper(isCancled: boolean, piece?:PromotionPiece) {
+        onPromotion(isCancled, piece);
+        closePromotionWindow()
     }
     function getSquareByBoardCoords(clickCoords: Coords) {
         let boardWidth = ref.current.offsetWidth;
@@ -218,39 +299,8 @@ let ChessBoard = function (props: ChessBoardProps) {
 
         return {file: col, rank: row} as Square;
     }
-    function getPieceBySquare(square: Square) {
-        return ChessEngine.get(toAlgebraic(square));
-    }
-    function grabPieceAtCoords(pieceHTML: HTMLDivElement|null, coords: Coords) {
-        let square = getSquareByBoardCoords(coords);
-        let piece = getPieceBySquare(square);
-        if(!piece) throw new Error(`No piece at square ${square}`);
-        if(ChessEngine.turn()===playerSide && playerSide === piece.color)highlightedSquares.setSelectedPiece(square);
-        selectedPiece = {square, piece}
-        pieceHTML &&  setPieceHTMLPosInBoardCoords(pieceHTML, coords);
-        pieceHTML &&  pieceHTML.classList.add("dragging");
-        function onDrag(event: MouseEventInit) {
-            let globalCoords: Coords = {x:event.clientX!, y:event.clientY!};
-            let coords = getBoardCoordsFromGlobal(globalCoords);
-            if(pieceHTML){
-                drag(pieceHTML, coords);
-            }
-        }
-        function stopDrag() {
-            document.removeEventListener("pointermove",onDrag);
-            pieceHTML && pieceHTML.style && (pieceHTML.style.transform = "");
-            pieceHTML && pieceHTML.classList.remove("dragging");
-        }
-        document.addEventListener("pointermove", onDrag);
-        document.addEventListener("pointerup",
-                                       stopDrag,
-                                {once:true}
-                                 );
-    }
-    function drag(pieceHTML: HTMLDivElement, coords: Coords) {
-        setPieceHTMLPosInBoardCoords(pieceHTML, coords);
 
-    }
+
     function setPieceHTMLPosInBoardCoords(pieceHTML: HTMLDivElement, coords: Coords) {
         let boardWidth = ref.current.offsetWidth;
         let boardHeight = ref.current.offsetHeight;
@@ -282,44 +332,29 @@ let ChessBoard = function (props: ChessBoardProps) {
         return {file: x + 1, rank: 8 - y} as Square;
 
     }
-    function calculatePromotionWindowPosition() {
-        if((!isFlipped && playerSide === "w") || (isFlipped && playerSide === "b")){
-            return "top"
-        }else{
-            return "bottom"
-        }
-    }
-    function promotion(event: MouseEvent<HTMLDivElement>) {
-        event.stopPropagation();
-        let type = (event.target as HTMLDivElement).className.match(/[wb](?<type>[qrnb])/);
-        if(!type) return;
-        setPromotionWindowSetup({isOpen: false, file: 0});
-        promotionMove.promotion = type[1] as PieceType;
-        makeMove(promotionMove)
-        ChessEngine.move(moveToAlgebraic(promotionMove));
-        setPosition(ChessEngine.board());
+    function translateSquareToMatrixIndexes({file, rank}: Square): Indexes {
+        return {x: file-1, y: 8-rank} as Indexes;
 
     }
-
-    function reason(){
-        if(ChessEngine.in_checkmate()){
-            let side_that_won = ChessEngine.turn() === "w"?
-                "Black":"White";
-            return side_that_won+" won by checkmate.";
-        }
-        if(ChessEngine.in_stalemate()){
-            return "Stalemate";
-        }
-        if(ChessEngine.in_threefold_repetition()){
-            return "Draw by repetition";
-        }
-        if(ChessEngine.insufficient_material()){
-            return "Draw. Not enough material";
-        }else{
-            console.log("Something went wrong. Game is not over");
-            return "";
-        }
-    }
+        // function reason(){
+        //     if(ChessEngine.in_checkmate()){
+        //         let side_that_won = ChessEngine.turn() === "w"?
+        //             "Black":"White";
+        //         return side_that_won+" won by checkmate.";
+        //     }
+        //     if(ChessEngine.in_stalemate()){
+        //         return "Stalemate";
+        //     }
+        //     if(ChessEngine.in_threefold_repetition()){
+        //         return "Draw by repetition";
+        //     }
+        //     if(ChessEngine.insufficient_material()){
+        //         return "Draw. Not enough material";
+        //     }else{
+        //         console.log("Something went wrong. Game is not over");
+        //         return "";
+        //     }
+        // }
 
 
 
@@ -337,22 +372,10 @@ let ChessBoard = function (props: ChessBoardProps) {
 
     return(
         <Adaptive>
-            <div ref = {ref} onPointerUp={handlePointerUp} onPointerDown={handlePointerDown} className = "chessboard">
+            <div ref = {ref} onPointerDown={handlePointerDown} className = "chessboard">
                 {
-                    isVictory && <VictoryPrompt sendRematchReq={()=>dispatch({type:"rematch_request"})} reason={reason()}/>
-                }
-                {
-                    promotionWindowSetup.isOpen ?
-                    (<PromotionWindow position={calculatePromotionWindowPosition()}
-                                      color={playerSide}
-                                      file={promotionWindowSetup.file as ChessNumbers}>
-                        <Piece isPromotion={true} type="b" color={state.side!} onMouseDown={promotion}/>
-                        <Piece isPromotion={true} type="n" color={state.side!} onMouseDown={promotion}/>
-                        <Piece isPromotion={true} type="r" color={state.side!} onMouseDown={promotion}/>
-                        <Piece isPromotion={true} type="q" color={state.side!} onMouseDown={promotion}/>
-                    </PromotionWindow>)
-                        :
-                    null
+                    promotionSetup.isOpen && 
+                        <PromotionWindow {...promotionSetup} onPromotion={onPromotionWrapper}/>
                 }
                 <HighlightedSquare type="selected_piece"
                                    square={highlightedSquares.selected_piece}

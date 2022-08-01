@@ -35,9 +35,9 @@ export function useWebSocketWrapper<IncomingMessage, OutgoingMessage extends str
     function reconnect() {
         ws.current = new WebSocket(url);
     }
-    onClose && useWebSocketListener("close", onClose, ws);
-    onOpen  && useWebSocketListener("open", onOpen, ws);
-    onError && useWebSocketListener("error", onError, ws);
+    useWebSocketListener("close", onClose, ws);
+    useWebSocketListener("open", onOpen, ws);
+    useWebSocketListener("error", onError, ws);
     useWebSocketListener("message", onMessage, ws);
     return{
         get readyState(){

@@ -1,21 +1,38 @@
 import "./PromotionWindow.scss"
 import {ChessNumbers, Color} from "../types";
-import Piece from "../Piece/Piece";
-import {ReactChild} from "react";
+import { MouseEvent } from "react";
 interface PromotionProps {
     file: ChessNumbers,
     color: Color,
-    position: "top"|"bottom"
-    children: ReactChild|ReactChild[]
+    isAtTop: boolean,
+    onPromotion: (
+        isCancled: boolean, 
+        piece?:{color: Color, type: "q"|"r"|"b"|"n"}
+    )=>void,
 }
 
 
 export function PromotionWindow(props: PromotionProps) {
-    let positionClass = props.position === "top"? "promotion-window--top ": "";
+    const {color, isAtTop, file, onPromotion} = props;
+    function onPromotionWrapper(
+        event: MouseEvent<HTMLDivElement>,
+        isCancled: boolean, 
+        piece:{color: Color, type: typeof piecesTypes[number]}
+    ){
+        event.stopPropagation()
+        onPromotion(isCancled, piece)
+    }
+    const piecesTypes = ["n","b","r","q"] as const;
+    const positionClass = isAtTop? "promotion-window--top ": "";
+    const pieces = piecesTypes.map((type)=>{
+        return <div key={type} className={color+type+" promotion-piece"} 
+                    onPointerDown={(event)=>onPromotionWrapper(event,false, {color,type})}/>
+    })
+
     return(
         <div className ={"promotion-window "+positionClass}
-             style={{transform:`translateX(${props.file*100}%)`}}>
-            {props.children}
+            style={{transform:`translateX(${(props.file-1)*100}%)`}}>
+            {pieces}
         </div>
     )
 }

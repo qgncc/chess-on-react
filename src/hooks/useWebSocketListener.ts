@@ -1,15 +1,16 @@
 import { RefObject, useEffect, useRef } from 'react'
 
+type WebSocketEventHandler<K extends keyof WebSocketEventMap> = (
+  event: WebSocketEventMap[K],
+) => void;
 
 function useWebSocketListener<K extends keyof WebSocketEventMap>(
   eventName: K,
-  handler: (
-    event: WebSocketEventMap[K],
-  ) => void,
+  handler: WebSocketEventHandler<K> = (event)=>{},
   element: RefObject<WebSocket>,
   options?: boolean | AddEventListenerOptions,
 ) {
-
+  
     const savedHandler = useRef(handler)
 
     useEffect(() => {
