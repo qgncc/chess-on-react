@@ -1,8 +1,5 @@
 import ChessEngine from "chess.js"
-import {Dispatch, ReactChild} from "react";
-import {NavigateFunction} from "react-router-dom";
-import { Interface } from "readline";
-import {ConnectionController} from "./connection/connection";
+import {ReactChild} from "react";
 
 const chessNumbers = [1,2,3,4,5,6,7,8] as const
 const chessLetters = ['a','b','c','d','e','f','g','h'] as const

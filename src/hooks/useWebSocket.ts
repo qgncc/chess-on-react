@@ -26,8 +26,14 @@ export function useWebSocket<IncomingMessage, OutgoingMessage>
     const timeFactor = options?.timeFactor || 1.5;
     const protocols = options?.protocols;
 
+    const messageQ: string[] = [];
 
     function onOpen(e: Event) {
+        let message = messageQ.shift()
+        while(message){
+            sendMessage(message);
+            message = messageQ.shift()
+        }
         options?.onOpen && options.onOpen(e)
     }
     function onClose(e: CloseEvent){
@@ -60,10 +66,15 @@ export function useWebSocket<IncomingMessage, OutgoingMessage>
         setTimeout(()=>reconnectWithBackOff(tryNumber+1), delay)
     }
     function sendMessage(message: string) {
-        ws.sendMessage(message);
+        if(ws.readyState !== WebSocket.OPEN){
+            console.log("here")
+            messageQ.push(message);
+        }else{
+            ws.sendMessage(message);
+        }
     }
     function sendMessageJSON(message: object){
-        ws.sendMessage(JSON.stringify(message))
+        sendMessage(JSON.stringify(message))
     }
     function close() {
         ws.close();

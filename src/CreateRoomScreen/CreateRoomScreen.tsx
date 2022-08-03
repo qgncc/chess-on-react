@@ -15,9 +15,16 @@ export function CreateRoomScreen(props: CreateRoomScreenProps) {
         setChecked(event.target.id as Color|"any");
     }
     function onClick(event:MouseEvent<HTMLButtonElement>){
+        let color;
+        if(checked === "any"){
+            color = Math.random()>0.5?"w":"b";
+        }
+        else{
+            color = checked;
+        }
         event.preventDefault();
         let roomID = v4();
-        navigate("../roomID", { replace: true, state: {isRoomCreator: true}});
+        navigate("../"+roomID, { replace: true, state: {isRoomCreator: true, color}});
     }
     return(
         <BlackBox className={className}>

@@ -1,14 +1,10 @@
-import React, { Reducer, useState, useRef, useEffect, useReducer} from 'react';
 import "./App.scss";
 import {CreateRoomScreen} from "./CreateRoomScreen/CreateRoomScreen";
 import {
     Routes,
     Route, useNavigate,
 } from "react-router-dom";
-import {connect} from "./connection/connection";
-import {GameStartedEvent, RoomCreatedEvent, RoomJoinedEvent} from "./WebSocketMessages";
 import {Lobby} from "./Lobby/Lobby";
-import ChessBoard, { DropEvent } from './ChessBoard/ChessBoard';
 const Chess = require("chess.js");
 
 
