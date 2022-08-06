@@ -9,7 +9,7 @@ export interface useWebSocketWrapperOptions{
 } 
 
 export function useWebSocketWrapper<IncomingMessage, OutgoingMessage extends string>(
-    url:string, 
+    websocket: WebSocket|string, 
     messageHandler: (message: IncomingMessage)=>void,
     options?: useWebSocketWrapperOptions
 )
@@ -19,9 +19,10 @@ export function useWebSocketWrapper<IncomingMessage, OutgoingMessage extends str
     const onClose = options?.onClose;
     const onError = options?.onError;
     //-------------------------------
+    const url = websocket instanceof WebSocket? websocket.url : websocket
+    const ws = useRef(websocket instanceof WebSocket? websocket : new WebSocket(url));
 
-    const ws = useRef(new WebSocket(url));
-    
+
     function onMessage(event: MessageEvent) {
         console.log(event);
         messageHandler(JSON.parse(event.data))
@@ -33,7 +34,7 @@ export function useWebSocketWrapper<IncomingMessage, OutgoingMessage extends str
         ws.current.close();
     }
     function reconnect() {
-        ws.current = new WebSocket(url);
+        ws.current = new WebSocket(url, options?.protocols);
     }
     useWebSocketListener("close", onClose, ws);
     useWebSocketListener("open", onOpen, ws);
@@ -42,6 +43,9 @@ export function useWebSocketWrapper<IncomingMessage, OutgoingMessage extends str
     return{
         get readyState(){
             return ws.current.readyState
+        },
+        get ws(){
+            return ws.current
         },
         sendMessage,
         close,

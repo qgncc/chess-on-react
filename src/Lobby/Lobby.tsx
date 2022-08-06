@@ -13,26 +13,28 @@ interface LobbyProps{
 export function Lobby(props: LobbyProps) {
     const wsURL = process.env.NODE_ENV === "development"?
         "ws://localhost:8081/":"wss://chess.qgncc.com/"
-    const {roomID,} = useParams();
+    const {roomID} = useParams();
     const location = useLocation();
     const state = location.state as {isRoomCreator: boolean, color: Color}|null
     if(!roomID) throw new Error("No roomID");
     
-    const manager = useChessGameManager(wsURL, roomID, state?.color);
+    const manager = useChessGameManager(wsURL, state?.color);
 
     useEffect(()=>{
         if(!roomID) throw new Error("No roomID");
         if(state?.isRoomCreator) {
-            manager.createRoom();
+            manager.createRoom(roomID);
         }else{
-            manager.joinRoom()
+            manager.joinRoom(roomID)
         }
     },[roomID, manager]);
 
     return(
         <>
         {
-            !state?.isRoomCreator? 
+            state?.isRoomCreator? 
+                <WaitingScreen roomID={roomID}/>
+                :
                 manager.gameStatus === "started"?
                 <ChessBoard onDrop={manager.onDrop} 
                             position={manager.position}
@@ -40,8 +42,6 @@ export function Lobby(props: LobbyProps) {
                 />
                 :
                 "Loading...."
-            :
-            <WaitingScreen roomID={roomID}/>
         }
         </>
     );

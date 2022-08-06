@@ -1,5 +1,7 @@
 import { useWebSocketWrapper } from "./useWebSocketWrapper";
 import type { useWebSocketWrapperOptions } from "./useWebSocketWrapper";
+import { useRef } from "react";
+import React from "react";
 
 interface Options extends useWebSocketWrapperOptions{
     shouldReconnect?: true,
@@ -11,12 +13,20 @@ interface Options extends useWebSocketWrapperOptions{
     timeFactor?: number,
 }
 
+
+
+export type WebScoketObject = ReturnType<typeof useWebSocket>;
+
+
+
 export function useWebSocket<IncomingMessage, OutgoingMessage>
 (
     url: string,
     messageHandler: (message: IncomingMessage)=>void,
     options?: Options
 ){
+
+
     const shouldReconnect = options?.shouldReconnect || false;
     const exponentialBackOff = options?.exponentialBackOff || false;
     const reconnectTime = options?.reconnectTime || 0;
@@ -26,8 +36,8 @@ export function useWebSocket<IncomingMessage, OutgoingMessage>
     const timeFactor = options?.timeFactor || 1.5;
     const protocols = options?.protocols;
 
-    const messageQ: string[] = [];
-
+    const messageQueue = useRef<string[]>([]);
+    const messageQ = messageQueue.current;
     function onOpen(e: Event) {
         let message = messageQ.shift()
         while(message){
@@ -80,7 +90,8 @@ export function useWebSocket<IncomingMessage, OutgoingMessage>
         ws.close();
     }
 
-    const ws = useWebSocketWrapper(url, messageHandler, {onClose, onOpen, onError, protocols});
+    
+    const ws = useWebSocketWrapper(url , messageHandler, {onClose, onOpen, onError, protocols});
 
     return{
         get readyState(){

@@ -6,22 +6,25 @@ import { useChessLogic } from "./useChessLogic";
 import { useWebSocket } from "./useWebSocket";
 
 type IncomingMessage = {type: "move", move: string} 
-                        |{type: "game_joined", roomID: string, side: Color} 
-                        |{type: "game_created", roomID: string} 
-                        |{type: "game_started"} 
+                        |{type: "game_joined"} 
+                        |{type: "game_created", roomID: string, side: Color} 
+                        |{type: "room_joined"} 
+                        |{type: "game_started", roomID: string, side: Color} 
                         |{type: "game_ended", reason: string}
+                        |{type: "error", errorID: number}
 type OutgoingMessage = {type: "move", move: string}
-                        |{type: "create_room", roomID:string}
+                        |{type: "create_room", side?:Color}
                         |{type: "join_room", roomID:string}
                         |{type: "game_ended", reason: string}
 
 export type UpdateBoardFunc = (move: ShortMove)=>boolean
 
-export function useChessGameManager(url: string, roomID: string, color?: Color| undefined){
+export function useChessGameManager(url: string, color?: Color){
     
     const {position, checkIfPromotion,  updatePositon:updateBoard} = useChessLogic();
     const {onDrop, onPromotion} = useChessBoardCallbacks(updateBoard, checkIfPromotion)
-    const [side, setSide] = useState<Color|any>(color? color:"any")
+    const [side, setSide] = useState<Color|any>(color);
+    const roomID =  useRef<string|null>(null)
     function stringMoveToObject(move: string) {
         return{
             from: move[0]+move[1],
@@ -35,11 +38,7 @@ export function useChessGameManager(url: string, roomID: string, color?: Color| 
         switch (message.type) {
             case "game_created":
                 setGameStatus("created")
-                joinRoom()
-                break;
-            case "game_joined":
-                setGameStatus("joined")
-                setSide(message.side)
+                joinRoom(message.roomID, side);
                 break;
             case "game_started":
                 setGameStatus("started")
@@ -68,12 +67,11 @@ export function useChessGameManager(url: string, roomID: string, color?: Color| 
     const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen})
     
 
-    function joinRoom() {
-        ws.sendMessageJSON({type:"join_room", roomID, side: side.current})
+    function joinRoom(id: string, side?: Color) {
+        ws.sendMessageJSON({type:"join_room", id, side})
     }
-    function createRoom() {
-        ws.sendMessageJSON({type:"create_room", roomID});
-        joinRoom();
+    function createRoom(id: string) {
+        ws.sendMessageJSON({type:"create_room", id});
     }
 
 
