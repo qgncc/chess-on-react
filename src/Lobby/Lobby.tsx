@@ -27,19 +27,19 @@ export function Lobby(props: LobbyProps) {
         }else{
             manager.joinRoom(roomID)
         }
-    },[roomID, manager]);
+    },[roomID]);
 
     return(
         <>
         {
-            state?.isRoomCreator? 
-                <WaitingScreen roomID={roomID}/>
-                :
-                manager.gameStatus === "started"?
-                <ChessBoard onDrop={manager.onDrop} 
+            manager.gameStatus === "started"?
+            <ChessBoard onDrop={manager.onDrop} 
                             position={manager.position}
                             onPromotion={manager.onPromotion}
-                />
+            />
+            :
+            state?.isRoomCreator? 
+                <WaitingScreen roomID={roomID}/>
                 :
                 "Loading...."
         }

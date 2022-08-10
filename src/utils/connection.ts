@@ -7,7 +7,7 @@ interface WebSocketWrapperOptions{
     protocols?: string| string[]
 }
 
-interface Options extends WebSocketWrapperOptions{
+export interface Options extends WebSocketWrapperOptions{
     shouldReconnect?: true,
     exponentialBackOff?: true,
     maxReconnectionAttemps?: number;
@@ -34,9 +34,7 @@ function lookForManager<IncomingMessage extends object, OutgoingMessage extends 
     if(window.webSocketConnectionObject === undefined){
         window.webSocketConnectionObject = createConnectionManager()
     }
-    window.webSocketConnectionObject.open(url, messageHandler, options);
-
-    
+    return window.webSocketConnectionObject.open(url, messageHandler, options);
 }
 
 
@@ -87,8 +85,10 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
 
     const messageQ: string[] = []
     function onOpen(e: Event) {
+        
         let message = messageQ.shift()
         while(message){
+            console.log(message)
             sendMessage(message);
             message = messageQ.shift()
         }
@@ -138,7 +138,7 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     }
     function sendMessage(message: string) {
         if(ws.readyState !== WebSocket.OPEN){
-            console.log("here")
+            console.log(ws.readyState, ws.OPEN)
             messageQ.push(message);
         }else{
             ws.send(message);
