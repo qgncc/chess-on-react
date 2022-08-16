@@ -12,7 +12,7 @@ type IncomingMessage = {type: "move", move: string}
                         |{type: "game_started"} 
                         |{type: "game_ended", reason: string}
                         |{type: "error", errorID: number}
-type OutgoingMessage = {type: "move", move: string}
+type OutgoingMessage = {type: "move", move: string, side: Color}
                         |{type: "create_room", side?:Color}
                         |{type: "join_room", roomID:string}
                         |{type: "game_ended", reason: string}
@@ -97,7 +97,7 @@ export function useChessGameManager(url: string, color?: Color){
         setIsConnected(true)
     }
     function sendMove(roomID: string, move: ShortMove) {
-        ws.sendMessageJSON({type:"move", roomID, move: objectMoveToString(move)});
+        ws.sendMessageJSON({type:"move", roomID, move: objectMoveToString(move), side});
     }
     const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen})
     
