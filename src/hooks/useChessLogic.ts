@@ -12,6 +12,7 @@ export function useChessLogic() {
     function onMove(move: AlgebraicMove) {
         const newMove = chess.move(move);
         if(newMove) setPosition(chess.board());
+        console.log(chess.ascii())
         return !!newMove
     }
 
@@ -24,19 +25,25 @@ export function useChessLogic() {
         function some(m: any){
             return (m.to === move.to && m.flags.includes("p"));
         }
-        const piece = chess.get(move.from);
 
-        return (piece.type === "p" 
+        const piece = chess.get(move.from);
+        return (
+            piece
+            && piece.type === "p" 
             && move.to[1] === LAST_RANK[chess.turn() as Color]
             && chess.moves({square: move.from, verbose: true})
             .some(some))
     }
-    
+    function reset() {
+        chess.reset()
+    }
 
     return{
         position,
+        reset,
         updatePositon: useCallback(onMove, [chess]),
-        checkIfPromotion: useCallback(checkIfPromotion, [chess])
+        checkIfPromotion: useCallback(checkIfPromotion, [chess]),
+        turn: useCallback(()=>chess.turn(), [chess])
     }
     
 }

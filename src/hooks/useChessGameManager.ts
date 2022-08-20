@@ -21,32 +21,20 @@ export type UpdateBoardFunc = (move: ShortMove)=>boolean
 
 export function useChessGameManager(url: string, color?: Color){
     
-    const {position, checkIfPromotion,  updatePositon:updateBoard} = useChessLogic();
-    const {onDrop, onPromotion} = useChessBoardCallbacks(updateBoard, checkIfPromotion)
-
-    const onDropWrapper: typeof onDrop = function(event) {
-        
-        const isLegal = onDrop(event);
-        console.log(isLegal)
-        if(isLegal){
-            console.log(roomID.current)
-            if(roomID.current){ 
-                sendMove(
-                    roomID.current,
-                    {
-                        from:event.initialSquare.algebraic, 
-                        to: event.dropSquare.algebraic
-                    }, 
-                );
-            }
-            return true;
-        }
-        else return false
-    }
-    function onPromotionWrapper() {
-    }
     const [side, setSide] = useState<Color|any>(color);
+    const {position, checkIfPromotion,  updatePositon:updateBoard, turn} = useChessLogic();
     const roomID =  useRef<string|null>(null)
+    const {onDrop, onPromotion} = useChessBoardCallbacks(updateBoard, sendMoveWrapper, checkIfPromotion, side, turn)
+
+    const [gameStatus, setGameStatus] = useState<"joined"|"started"|"ended"|"created">("created")
+    const [isConnected, setIsConnected] = useState<boolean>(false)
+    
+
+    function sendMoveWrapper(move: ShortMove){
+        if(!roomID.current) throw new Error("No roomID")
+        sendMove(roomID.current, move);
+    }
+
     function stringMoveToObject(move: string) {
         return{
             from: move[0]+move[1],
@@ -59,8 +47,6 @@ export function useChessGameManager(url: string, color?: Color){
 
         return move.from+move.to+promotion
     }
-    let [gameStatus, setGameStatus] = useState<"joined"|"started"|"ended"|"created">("created")
-    let [isConnected, setIsConnected] = useState<boolean>(false)
     function onMessage(message: IncomingMessage) {
         console.log(message);
         switch (message.type) {
@@ -90,6 +76,9 @@ export function useChessGameManager(url: string, color?: Color){
                 break;
         }
     }
+    function startGame() {
+        setGameStatus("started");
+    }
     function onClose(event: CloseEvent) {
         setIsConnected(false)
     }
@@ -118,7 +107,7 @@ export function useChessGameManager(url: string, color?: Color){
         joinRoom,
         createRoom,
         sendMove,
-        onDrop: onDropWrapper,
+        onDrop,
         onPromotion,
     }
 }
