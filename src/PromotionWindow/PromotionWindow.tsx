@@ -31,7 +31,7 @@ export function PromotionWindow(props: PromotionProps) {
 
     return(
         <div className ={"promotion-window "+positionClass}
-            style={{transform:`translateX(${(props.file-1)*100}%)`}}>
+            style={{transform:`translateX(${(file-1)*100}%)`}}>
             {pieces}
         </div>
     )

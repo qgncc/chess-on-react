@@ -34,9 +34,9 @@ export function Lobby(props: LobbyProps) {
         {
             manager.gameStatus === "started"?
             <ChessBoard onDrop={manager.onDrop} 
-                            position={manager.position}
-                            onPromotion={manager.onPromotion}
-                            flipped={manager.side === "w"? false: true}
+                        position={manager.position}
+                        onPromotion={manager.onPromotion}
+                        flipped={manager.side === "w"? false: true}
             />
             :
             state?.isRoomCreator? 

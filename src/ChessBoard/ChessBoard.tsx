@@ -268,7 +268,7 @@ let ChessBoard = function (props: ChessBoardProps) {
                 isOpen: true,
                 isAtTop,
                 color,
-                file
+                file: (isFlipped? 9-file: file) as ChessNumbers
             }
         )
 
