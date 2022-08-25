@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {Options, connect} from "../utils/connection";
 
 
@@ -24,16 +24,17 @@ export function useWebSocket<IncomingMessage extends object, OutgoingMessage ext
         options && options.onClose && options.onClose(event);
         setIsOpen(false)
     }
-    const connection =  useMemo<ReturnType<typeof connect>>(
-        ()=>connect<IncomingMessage, OutgoingMessage>(
+    //TODO think
+    const connection =  useRef<ReturnType<typeof connect>>(
+        connect<IncomingMessage, OutgoingMessage>(
             url, 
             messageHandlerRef.current, 
             {...options, onOpen, onClose}),
-    [url, messageHandlerRef.current]);
+    );
 
     return{
         isOpen,
-        ...connection,
+        ...connection.current,
     }
 
 }

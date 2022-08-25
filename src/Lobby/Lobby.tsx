@@ -14,7 +14,7 @@ interface LobbyProps{
 
 export function Lobby(props: LobbyProps) {
     const wsURL = process.env.NODE_ENV === "development"?
-        "ws://localhost:8081/":"wss://chess.qgncc.com/"
+        "ws://localhost:8081/":"wss://chess.qgncc.com/ws"
     const {roomID} = useParams();
     const location = useLocation();
     const state = location.state as {isRoomCreator: boolean, color: Color}|null
