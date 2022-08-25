@@ -70,7 +70,8 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     messageHandler:(e: IncomingMessage)=>void, 
     options?: Options
 ){
-    const shouldReconnect = options?.shouldReconnect || false;
+    //TODO fix reconnection, false for now
+    const shouldReconnect =  false;
     const exponentialBackOff = options?.exponentialBackOff || false;
     const reconnectTime = options?.reconnectTime || 0;
     const maxReconnectionAttemps =  options?.maxReconnectionAttemps || 10;
@@ -82,10 +83,11 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     const onErrorCallback = options?.onError;
 
     let ws = new WebSocket(url, options?.protocols);
-
+    let isFirstClose = true;
     const messageQ: string[] = []
     function onOpen(e: Event) {
-        
+        console.log("ws open")
+        isFirstClose = true;
         let message = messageQ.shift()
         while(message){
             console.log(message)
@@ -95,12 +97,16 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
         onOpenCallback && onOpenCallback(e)
     }
     function onClose(e: CloseEvent){
+        console.log("ws close")
         onCloseCallback && onCloseCallback(e)
         options?.onClose && options.onClose(e);
         if(!shouldReconnect) return;
+        if(!isFirstClose) return;
+        isFirstClose = false;
         if(exponentialBackOff){
             reconnectWithBackOff();
         }else{
+            console.log("here")
             reconnect();
         }
     }
@@ -118,13 +124,15 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     ws.addEventListener("message", onMessage)
 
     function reconnect(tryNumber: number = 1){
-        if(tryNumber>maxReconnectionAttemps) throw new Error("Couldn reconnect to the socket after "+tryNumber+" attemps");
         if(ws.readyState === WebSocket.OPEN) return;
         if(ws.readyState !== WebSocket.CONNECTING) setTimeout(()=>reconnect(tryNumber), reconnectTime)
         else ws = new WebSocket(url, options?.protocols);
         setTimeout(()=>reconnect(tryNumber), reconnectTime);
     }
     function reconnectWithBackOff(tryNumber: number = 1){
+        //TODO fix reconnection. Probably should transfer responsibility to manager
+        console.log("ws reconnecting...")
+        if(tryNumber>maxReconnectionAttemps) throw new Error("Couldn reconnect to the socket after "+tryNumber+" attemps");
         if(ws.readyState === WebSocket.OPEN) return;
         if(ws.readyState === WebSocket.CONNECTING){
             setTimeout(()=>reconnectWithBackOff(tryNumber), 1000)
@@ -134,6 +142,7 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
             minReconnectDelay+((Math.random()+0.1)*timeFactor*tryNumber),
             maxReconnectDelay*(Math.random()+0.1)
         );
+        console.log(delay)
         setTimeout(()=>reconnectWithBackOff(tryNumber+1), delay)
     }
     function sendMessage(message: string) {
