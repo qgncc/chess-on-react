@@ -1,15 +1,15 @@
 import { ShortMove } from "chess.js";
-import { useReducer, useRef, useState } from "react";
-import { PromotionWindow } from "../PromotionWindow/PromotionWindow";
-import { Color } from "../types";
-import { useChessBoardCallbacks } from "./useChessBoardCallbacks";
+import { useCallback, useRef, useState } from "react";
+import { AlgebraicNotation, SquareObject, Color, AlgebraicMove } from "../types";
+import { DropEvent, PickEvent } from "../ChessBoard/ChessBoard";
+
 import { useChessLogic } from "./useChessLogic";
 import { useWebSocket } from "./useWebSocket";
 
 type IncomingMessage = {type: "move", move: string} 
                         |{type: "game_joined", side: Color, roomID: string} 
                         |{type: "game_created", roomID: string} 
-                        |{type: "game_started"} 
+                        |{type: "game_started", side: Color} 
                         |{type: "game_ended", reason: string}
                         |{type: "error", errorID: number}
 type OutgoingMessage = {type: "move", move: string, side: Color}
@@ -19,34 +19,38 @@ type OutgoingMessage = {type: "move", move: string, side: Color}
 
 export type UpdateBoardFunc = (move: ShortMove)=>boolean
 
+
+function stringMoveToObject(move: string) {
+    return{
+        from: move[0]+move[1],
+        to: move[2]+move[3],
+        promotion: move[4] || undefined,
+    } as ShortMove
+}
+function objectMoveToString(move: ShortMove) {
+    const promotion = move.promotion?move.promotion:""
+
+    return move.from+move.to+promotion
+}
+
 export function useChessGameManager(url: string, color?: Color){
-    
+    const HIGHLIGHT_SQUARE_COLOR = "#ffff00";
     const [side, setSide] = useState<Color|any>(color);
-    const {position, checkIfPromotion,  updatePositon:updateBoard, turn} = useChessLogic();
+    const {position, checkIfPromotion,  updatePositon, turn, reset} = useChessLogic();
     const roomID =  useRef<string|null>(null)
-    const {onDrop, onPromotion} = useChessBoardCallbacks(updateBoard, sendMoveWrapper, checkIfPromotion, side, turn)
+
+    const promotionPawn = useRef<HTMLDivElement|null>(null)
+    const promotionSquares = useRef<{squareFrom:SquareObject, squareTo: SquareObject}|null>(null)
+
+    const [seletePieceSquare, setSelectedPieceSquare] = useState<AlgebraicNotation|null>(null);
+    const [highlightedSquares, setHighlightedSquares] = useState<{[key in AlgebraicNotation]?: string}>({});
 
     const [gameStatus, setGameStatus] = useState<"joined"|"started"|"ended"|"created">("created")
     const [isConnected, setIsConnected] = useState<boolean>(false)
     
+    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen, shouldReconnect: true, exponentialBackOff: true})
 
-    function sendMoveWrapper(move: ShortMove){
-        if(!roomID.current) throw new Error("No roomID")
-        sendMove(roomID.current, move);
-    }
-
-    function stringMoveToObject(move: string) {
-        return{
-            from: move[0]+move[1],
-            to: move[2]+move[3],
-            promotion: move[4] || undefined,
-        } as ShortMove
-    }
-    function objectMoveToString(move: ShortMove) {
-        const promotion = move.promotion?move.promotion:""
-
-        return move.from+move.to+promotion
-    }
+    
     function onMessage(message: IncomingMessage) {
         console.log(message);
         switch (message.type) {
@@ -56,7 +60,7 @@ export function useChessGameManager(url: string, color?: Color){
                 break;
             case "game_started":
                 console.log("game_started")
-                setGameStatus("started")
+                startGame(message.side)
                 break;
             case "game_joined":
                 setGameStatus("joined");
@@ -76,8 +80,12 @@ export function useChessGameManager(url: string, color?: Color){
                 break;
         }
     }
-    function startGame() {
+    function startGame(side: Color) {
         setGameStatus("started");
+        setSide(side);
+        setHighlightedSquares({});
+        setSelectedPieceSquare(null)
+        reset();
     }
     function onClose(event: CloseEvent) {
         setIsConnected(false)
@@ -85,18 +93,86 @@ export function useChessGameManager(url: string, color?: Color){
     function onOpen(event: Event) {
         setIsConnected(true)
     }
-    function sendMove(roomID: string, move: ShortMove) {
-        ws.sendMessageJSON({type:"move", roomID, move: objectMoveToString(move), side});
-    }
-    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen})
     
 
-    function joinRoom(roomID: string, side?: Color) {
+
+    const sendRematchReq = useCallback((roomID: string) => {
+        ws.sendMessageJSON({type:"rematch_request", side, roomID})
+    }, [side, ws])    
+    const joinRoom =  useCallback((roomID: string, side?: Color) => {
         ws.sendMessageJSON({type:"join_room", roomID, side})
-    }
-    function createRoom(roomID: string) {
+    }, [ws])
+    const sendMove = useCallback((roomID: string, move: AlgebraicMove) => {
+        ws.sendMessageJSON({type:"move", roomID, move: objectMoveToString(move), side});
+    }, [ws, side])
+    const createRoom = useCallback((roomID: string) => {
         ws.sendMessageJSON({type:"create_room", roomID});
+    }, [ws])
+    
+
+    const updateBoard = useCallback((move: AlgebraicMove) => {
+        
+        const result = updatePositon(move)
+        if(!roomID.current) throw new Error("No roomID")
+        if(result) {
+            sendMove(roomID.current, move)
+            setHighlightedSquares({
+                [move.from]: HIGHLIGHT_SQUARE_COLOR,
+                [move.to]: HIGHLIGHT_SQUARE_COLOR,
+            })
+            setSelectedPieceSquare(null);
+            return true
+        }
+        return false
+    }, [updatePositon, sendMove, setHighlightedSquares, setSelectedPieceSquare])
+    
+    //-----------------CALLBACKS
+    function onPick(event: PickEvent) {
+        setSelectedPieceSquare(event.square.algebraic);
+        return true
     }
+
+    function onDrop(dropEvent: DropEvent) {
+        if(side !== turn()) return false
+
+        const squareFrom = dropEvent.initialSquare;
+        const squareTo = dropEvent.dropSquare;
+
+        const newMove = {
+            from: squareFrom.algebraic,
+            to: squareTo.algebraic
+        }
+
+        
+        if(checkIfPromotion(newMove))
+        {
+            dropEvent.openPromotionWindow(squareTo.numeric.file, dropEvent.color, true);
+            promotionSquares.current = {squareFrom, squareTo};
+            if(dropEvent.htmlElement){
+                promotionPawn.current = dropEvent.htmlElement
+                promotionPawn.current.style.display = "none";
+            }
+            
+            return false
+        }
+        
+        return updateBoard(newMove);
+    }
+    function onPromotion(
+        isCancled: boolean, 
+        piece?:{type: "q"|"r"|"b"|"n", color: Color}
+    ){
+        if(!isCancled) {
+            if(!promotionSquares.current) throw new Error("No promotion squares!");
+            const {squareFrom: from, squareTo: to} = promotionSquares.current
+            const newMove = {from:from.algebraic, to: to.algebraic, promotion: piece?.type}
+            updateBoard(newMove)
+            promotionPawn.current = null
+        }else{
+            promotionPawn.current && (promotionPawn.current.style.display = "block")
+        }
+    }
+    //------------------------
 
 
     return{
@@ -104,10 +180,19 @@ export function useChessGameManager(url: string, color?: Color){
         gameStatus,
         isConnected,
         side,
+        get highlightedSquares(){
+            if(seletePieceSquare){
+                return {...highlightedSquares, [seletePieceSquare]: HIGHLIGHT_SQUARE_COLOR}
+            }else{
+                return highlightedSquares
+            }
+        },
         joinRoom,
         createRoom,
         sendMove,
-        onDrop,
-        onPromotion,
+        sendRematchReq,
+        onPick: useCallback(onPick, []),
+        onDrop: useCallback(onDrop, [ checkIfPromotion, side, turn, updateBoard]),
+        onPromotion: useCallback(onPromotion, [updateBoard]),
     }
 }

@@ -1,6 +1,6 @@
 import Piece from "../Piece/Piece";
 import "./ChessBoard.scss";
-import React, {useEffect, useRef, useState} from "react";
+import React, {ReactNode, useEffect, useRef, useState} from "react";
 import {
     AlgebraicNotation,
     Coords,
@@ -13,7 +13,6 @@ import {
     ChessNumbers,
 } from "../types";
 import Adaptive from "../Adaptive/Adaptive";
-import {useSquareHighlight} from "../hooks/useSquarHighlight";
 import { PromotionWindow } from "../PromotionWindow/PromotionWindow";
 
 
@@ -32,17 +31,19 @@ export interface DropEvent{
     )=>void
 }
 
+export interface PickEvent{
+    type: PieceType, 
+    color: "w" | "b",
+    square: SquareObject, 
+    htmlElement?:HTMLDivElement|null
+}
+
 
 interface ChessBoardProps{
     flipped?: boolean;
     position: Array<Array<{ type: PieceType; color: "w" | "b" } | null>>
     disabled?: boolean;
-    onPick?: (pickEvent: {
-        type: PieceType, 
-        color: "w" | "b",
-        square: SquareObject, 
-        htmlElement?:HTMLDivElement|null
-    })=>boolean;
+    onPick?: (pickEvent: PickEvent)=>boolean;
     onDrag?: (dragEvent: {
         type: PieceType, 
         color: "w" | "b",
@@ -52,26 +53,34 @@ interface ChessBoardProps{
     })=>void;
     onDrop: (dropEvent: DropEvent)=>boolean;
     onPromotion:(isCancled: boolean, piece?: PromotionPiece)=>void
+    children?: ReactNode|ReactNode[],
+    highlightedSquares?: {[key in AlgebraicNotation]?: string},
 }
 
 
-type HighLightedSquareType = "selected_piece"|"previous_move_from"|"previous_move_to";
 interface HighLightedSquareProps {
-    type:HighLightedSquareType,
-    square: Square|"none",
+    square: AlgebraicNotation,
+    color: string
+}
+
+function toNumeric(i: AlgebraicNotation): Square {
+    return {file: (i.charCodeAt(0) - 96), rank: (parseInt(i.charAt(1)))} as Square;
+}
+
+function toAlgebraic(i: Square): AlgebraicNotation {
+    return ("abcdefgh".slice(i.file - 1, i.file) + i.rank.toString()) as AlgebraicNotation;
 }
 
 let HighlightedSquare = function (props: HighLightedSquareProps) {
-    let {square, type} = props;
-    let squarePos = square === "none"?""
-        :"square-"+square.file+square.rank+" ";
-    let squareType = square === "none"?" chessboard__highlighted_square--hidden"
-        :" chessboard__highlighted_square--"+type+" ";
+    let {square, color} = props;
+
+    const numericSquare = toNumeric(square);
+
+    const squarePos = "square-"+numericSquare.file+numericSquare.rank+" ";
     return(
-        <div className={"chessboard__highlighted_square "
-            +squarePos
-            +squareType
-        }/>
+        <div style={{backgroundColor:color}}
+             className={"chessboard__highlighted_square "+squarePos}
+        />
     );
 }
 
@@ -88,10 +97,10 @@ let ChessBoard = function (props: ChessBoardProps) {
             isAtTop: true
         }
     );
-    let highlightedSquares = useSquareHighlight();
     let isFlipped = props.flipped;
     let ref = useRef() as React.MutableRefObject<HTMLDivElement>;
     let pieces: JSX.Element[] = [];
+    const highlightedSquares = props.highlightedSquares || [];
 
     const pieceSizeInPercent = 0.125;
     const selectedPiece = useRef<PieceObjectExtended|null>(null)
@@ -247,13 +256,7 @@ let ChessBoard = function (props: ChessBoardProps) {
         }, {once: true});
     }
 
-    function toNumeric(i: AlgebraicNotation): Square {
-        return {file: (i.charCodeAt(0) - 96), rank: (parseInt(i.charAt(1)))} as Square;
-    }
-
-    function toAlgebraic(i: Square): AlgebraicNotation {
-        return ("abcdefgh".slice(i.file - 1, i.file) + i.rank.toString()) as AlgebraicNotation;
-    }
+    
 
     // function openPromotionWindow(file:ChessNumbers) {
     //     setPromotionWindowSetup({isOpen: true, file:file-1})
@@ -370,22 +373,23 @@ let ChessBoard = function (props: ChessBoardProps) {
         }
     }
 
+    let highlightedSquaresElems = [];
+    for (const square in highlightedSquares) {
+        const highlightedSquare = square as keyof typeof highlightedSquares;
+        const color =  highlightedSquares[highlightedSquare];
+        const elem = <HighlightedSquare key={square} square={highlightedSquare} color={color}/>
+        highlightedSquaresElems.push(elem);
+    }
+
     return(
         <Adaptive>
             <div ref = {ref} onPointerDown={handlePointerDown} className = "chessboard">
+                {highlightedSquaresElems}
+                {props.children}
                 {
                     promotionSetup.isOpen && 
                         <PromotionWindow {...promotionSetup} onPromotion={onPromotionWrapper}/>
                 }
-                <HighlightedSquare type="selected_piece"
-                                   square={highlightedSquares.selected_piece}
-                />
-                <HighlightedSquare type="previous_move_from"
-                                   square={highlightedSquares.previous_move_from}
-                />
-                <HighlightedSquare type="previous_move_to"
-                                   square={highlightedSquares.previous_move_to}
-                />
                 {pieces}
 
             </div>

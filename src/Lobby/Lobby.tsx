@@ -1,14 +1,16 @@
 import ChessBoard from "../ChessBoard/ChessBoard";
 import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
 import {useParams} from "react-router";
-import { useChessLogic } from "../hooks/useChessLogic";
 import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useChessGameManager } from "../hooks/useChessGameManager";
 import { Color } from "../types";
+import { VictoryPrompt } from "../VictoryPrompt/VictoryPrompt"
 
 interface LobbyProps{
 }
+
+
 
 export function Lobby(props: LobbyProps) {
     const wsURL = process.env.NODE_ENV === "development"?
@@ -29,21 +31,24 @@ export function Lobby(props: LobbyProps) {
         }
     },[roomID]);
 
-    return(
-        <>
-        {
-            manager.gameStatus === "started"?
+    const sendRematchWrapper = useCallback(()=>manager.sendRematchReq(roomID),[manager.sendRematchReq])
+
+    if(manager.gameStatus === "started" || manager.gameStatus === "ended"){
+        return (
             <ChessBoard onDrop={manager.onDrop} 
                         position={manager.position}
                         onPromotion={manager.onPromotion}
+                        onPick={manager.onPick}
+                        highlightedSquares={manager.highlightedSquares}
                         flipped={manager.side === "w"? false: true}
-            />
-            :
-            state?.isRoomCreator? 
-                <WaitingScreen roomID={roomID}/>
-                :
-                "Loading...."
-        }
-        </>
-    );
+            >
+                {(manager.gameStatus === "ended") && <VictoryPrompt reason="TODO reason" sendRematchReq={sendRematchWrapper}/> }
+            </ChessBoard>
+        )
+    }else if(state?.isRoomCreator){
+        return <WaitingScreen roomID={roomID}/>
+    }else{
+        return <>Loading....</>
+    }
+
 }
