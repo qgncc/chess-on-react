@@ -36,6 +36,7 @@ export function useChessLogic() {
     }
     function reset() {
         chess.reset()
+        setPosition(chess.board)
     }
 
     return{
