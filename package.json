@@ -11,6 +11,7 @@
     "@types/node": "^16.11.36",
     "@types/react-dom": "^17.0.17",
     "chess.js": "^0.12.1",
+    "howler": "^2.2.3",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.3.0",
@@ -44,8 +45,8 @@
     ]
   },
   "devDependencies": {
-    "react-scripts": "5.0.0",
     "@types/react": "^17.0.45",
-    "@types/uuid": "^8.3.4"
+    "@types/uuid": "^8.3.4",
+    "react-scripts": "5.0.0"
   }
 }
