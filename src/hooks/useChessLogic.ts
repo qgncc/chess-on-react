@@ -1,6 +1,5 @@
 import { ShortMove } from "chess.js";
 import {useRef, useCallback, useState} from "react"
-import { DropEvent } from "../ChessBoard/ChessBoard";
 import { AlgebraicMove, Color, SquareObject } from "../types";
 
 const Chess = require("chess.js");
@@ -13,7 +12,7 @@ export function useChessLogic() {
         const newMove = chess.move(move);
         if(newMove) setPosition(chess.board());
         console.log(chess.ascii())
-        return !!newMove
+        return newMove
     }
 
     function checkIfPromotion(move: ShortMove) {
@@ -44,7 +43,8 @@ export function useChessLogic() {
         reset,
         updatePositon: useCallback(onMove, [chess]),
         checkIfPromotion: useCallback(checkIfPromotion, [chess]),
-        turn: useCallback(()=>chess.turn(), [chess])
+        turn: useCallback(()=>chess.turn(), [chess]),
+        inCheck: useCallback(()=>chess.in_check(), [chess])
     }
     
 }

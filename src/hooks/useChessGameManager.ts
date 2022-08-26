@@ -2,9 +2,9 @@ import { ShortMove } from "chess.js";
 import { useCallback, useRef, useState } from "react";
 import { AlgebraicNotation, SquareObject, Color, AlgebraicMove } from "../types";
 import { DropEvent, PickEvent } from "../ChessBoard/ChessBoard";
-
 import { useChessLogic } from "./useChessLogic";
 import { useWebSocket } from "./useWebSocket";
+import sound from "../utils/chessGameSoundsPlayer";
 
 type IncomingMessage = {type: "move", move: string} 
                         |{type: "game_joined", side: Color, roomID: string} 
@@ -36,7 +36,7 @@ function objectMoveToString(move: ShortMove) {
 export function useChessGameManager(url: string, color?: Color){
     const HIGHLIGHT_SQUARE_COLOR = "#ffff00";
     const [side, setSide] = useState<Color|any>(color);
-    const {position, checkIfPromotion,  updatePositon, turn, reset} = useChessLogic();
+    const {position, checkIfPromotion,  updatePositon, turn, reset, inCheck} = useChessLogic();
     const roomID =  useRef<string|null>(null)
 
     const promotionPawn = useRef<HTMLDivElement|null>(null)
@@ -70,6 +70,7 @@ export function useChessGameManager(url: string, color?: Color){
                 break;
             case "game_ended":
                 setGameStatus("ended")
+                sound.play("gameEnded")
                 break;
             case "move":
                 const move = stringMoveToObject(message.move)
@@ -84,8 +85,9 @@ export function useChessGameManager(url: string, color?: Color){
         setGameStatus("started");
         setSide(side);
         setHighlightedSquares({});
-        setSelectedPieceSquare(null)
+        setSelectedPieceSquare(null);
         reset();
+        sound.play("gameStarted");
     }
     function onClose(event: CloseEvent) {
         setIsConnected(false)
@@ -121,9 +123,21 @@ export function useChessGameManager(url: string, color?: Color){
                 [move.to]: HIGHLIGHT_SQUARE_COLOR,
             })
             setSelectedPieceSquare(null);
+
+            if(inCheck()){
+                sound.play("check")
+            }else if(result.flags.includes("c")){
+                sound.play("capture");
+            }else{
+                sound.play("move")
+            }
             return true
+        }else{
+            if(turn() === side && inCheck()){
+                sound.play("cantMove")
+            }
+            return false
         }
-        return false
     }, [updatePositon, sendMove, setHighlightedSquares, setSelectedPieceSquare])
     
     //-----------------CALLBACKS
