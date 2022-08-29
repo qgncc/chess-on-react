@@ -124,14 +124,12 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     
 
     function reconnect(){
-        console.log("WS readyState: ", ws.readyState)
         if(currentReconnectionTry>maxReconnectionAttemps) return;
         if(ws.readyState === WebSocket.OPEN) return;
         // if(ws.readyState === WebSocket.CONNECTING) return;
         currentReconnectionTry++;
         ws = new WebSocket(url, options?.protocols);
         addEventListeners();
-        console.log(ws.readyState)
     }
 
 
@@ -142,7 +140,6 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
                 minReconnectDelay+Math.random()+timeFactor*currentReconnectionTry,
                 maxReconnectDelay*(Math.random()+0.1)
             );
-            console.log("Reconnecting after: "+delay+"ms")
             setTimeout(reconnect, delay)
         }else{
             reconnect();
