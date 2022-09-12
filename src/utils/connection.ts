@@ -1,5 +1,3 @@
-import { CommonConnectionOptions } from "tls";
-
 interface WebSocketWrapperOptions{
     onOpen?: (event: WebSocketEventMap["open"])=>void,
     onClose?: (event: WebSocketEventMap["close"])=>void,
@@ -11,13 +9,12 @@ export interface Options extends WebSocketWrapperOptions{
     shouldReconnect?: true,
     exponentialBackOff?: true,
     maxReconnectionAttemps?: number;
-    reconnectTime?: number,
+    reconnectDelay?: number,
     minReconnectDelay?: number,
     maxReconnectDelay?: number,
     timeFactor?: number,
 }
 
-type Connection = ReturnType<typeof createConnection>
 
 declare global {
     interface Window{
@@ -25,8 +22,10 @@ declare global {
     }
 }
 
+type Connection = ReturnType<typeof createConnection>
 
-function lookForManager<IncomingMessage extends object, OutgoingMessage extends object>(
+
+function lookForManager<IncomingMessage, OutgoingMessage>(
     url: string, 
     messageHandler: (message:IncomingMessage)=>void,
     options?: Options 
@@ -34,23 +33,26 @@ function lookForManager<IncomingMessage extends object, OutgoingMessage extends 
     if(window.webSocketConnectionObject === undefined){
         window.webSocketConnectionObject = createConnectionManager()
     }
-    return window.webSocketConnectionObject.open(url, messageHandler, options);
+    return window.webSocketConnectionObject.open<IncomingMessage, OutgoingMessage>(url, messageHandler, options);
 }
 
 
 function createConnectionManager(){
-
+    
     const connections: {[url: string]: Connection} = {}
-    function open<IncomingMessage extends object, OutgoingMessage extends object>(
+    function open<IncomingMessage, OutgoingMessage>(
         url: string, 
         messageHandler: (message:IncomingMessage)=>void,
         options?: Options    
     ){
+
         if(url in connections){ 
             return connections[url];
         }
         else{
-            connections[url] = createConnection(url, messageHandler, options);
+            //TODO fix 
+            //@ts-ignore
+            connections[url] = createConnection<IncomingMessage, OutgoingMessage>(url, messageHandler, options);
             return connections[url];
         }
     }
@@ -65,7 +67,7 @@ function createConnectionManager(){
 }
 
 
-function createConnection<IncomingMessage extends object, OutgoingMessage extends object>(
+function createConnection<IncomingMessage, OutgoingMessage>(
     url: string, 
     messageHandler:(e: IncomingMessage)=>void, 
     options?: Options
@@ -73,7 +75,7 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
     //TODO fix reconnection, false for now
     const shouldReconnect =  options?.shouldReconnect || false;
     const exponentialBackOff = options?.exponentialBackOff || false;
-    const reconnectTime = options?.reconnectTime || 0;
+    const reconnectDelay = options?.reconnectDelay || 1000;
     const maxReconnectionAttemps =  options?.maxReconnectionAttemps || Infinity;
     const minReconnectDelay =  options?.minReconnectDelay || 1;
     const maxReconnectDelay = options?.maxReconnectDelay || Infinity;
@@ -135,15 +137,15 @@ function createConnection<IncomingMessage extends object, OutgoingMessage extend
 
     function tryReconnect(){
         if(!shouldReconnect) return;
-        if(exponentialBackOff){
-            let delay = Math.min(
-                minReconnectDelay+Math.random()+timeFactor*currentReconnectionTry,
-                maxReconnectDelay*(Math.random()+0.1)
-            );
-            setTimeout(reconnect, delay)
-        }else{
-            reconnect();
-        }
+        let delay =
+            exponentialBackOff?
+                Math.min(
+                    minReconnectDelay+Math.random()+timeFactor*currentReconnectionTry,
+                    maxReconnectDelay*(Math.random()+0.1)
+                )
+                :
+                reconnectDelay
+        setTimeout(reconnect, delay)
     }
     
     function sendMessage(message: string) {
