@@ -1,5 +1,5 @@
 import "./PromotionWindow.scss"
-import {ChessNumbers, Color} from "../types";
+import {ChessNumbers, Color} from "../../types";
 import { MouseEvent } from "react";
 interface PromotionProps {
     file: ChessNumbers,

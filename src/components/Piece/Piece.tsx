@@ -1,5 +1,5 @@
 import "./Piece.scss"
-import {Color, PieceType, Square} from "../types";
+import {Color, PieceType, Square} from "../../types";
 import {MouseEventHandler} from "react";
 
 export interface PieceProps {

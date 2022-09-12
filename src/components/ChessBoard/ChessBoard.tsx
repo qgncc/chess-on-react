@@ -11,7 +11,7 @@ import {
     Color,
     SquareObject,
     ChessNumbers,
-} from "../types";
+} from "../../types";
 import Adaptive from "../Adaptive/Adaptive";
 import { PromotionWindow } from "../PromotionWindow/PromotionWindow";
 

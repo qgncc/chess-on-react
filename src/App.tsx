@@ -1,10 +1,10 @@
 import "./App.scss";
-import {CreateRoomScreen} from "./CreateRoomScreen/CreateRoomScreen";
+import {CreateRoomScreen} from "./components/CreateRoomScreen/CreateRoomScreen";
 import {
     Routes,
     Route, useNavigate,
 } from "react-router-dom";
-import {Lobby} from "./Lobby/Lobby";
+import {Lobby} from "./components/Lobby/Lobby";
 const Chess = require("chess.js");
 
 

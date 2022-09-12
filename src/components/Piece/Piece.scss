@@ -1,7 +1,7 @@
 @each $piece in 'wp','wn','wb','wr','wq','wk','bp','bn','bb','br','bq','bk'{
   .#{$piece}{
     background-repeat: no-repeat;
-    background-image: url("../img/#{$piece}.png");
+    background-image: url("../../img/#{$piece}.png");
   }
 }
 .piece{

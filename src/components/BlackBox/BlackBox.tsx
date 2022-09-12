@@ -1,5 +1,5 @@
 import "./BlackBox.scss"
-import {Props} from "../types";
+import {Props} from "../../types";
 
 export function BlackBox(props: Props) {
     let className = props.className? props.className:"";

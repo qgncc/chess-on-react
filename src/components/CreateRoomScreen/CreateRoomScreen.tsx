@@ -1,5 +1,5 @@
 import "./CreateRoomScreen.scss"
-import {Color, Props} from "../types";
+import {Color, Props} from "../../types";
 import {BlackBox} from "../BlackBox/BlackBox";
 import {Link, useNavigate} from "react-router-dom";
 import { v4 } from 'uuid';

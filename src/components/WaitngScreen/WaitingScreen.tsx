@@ -1,5 +1,5 @@
 import "./WaitingScreen.scss"
-import {Props} from "../types";
+import {Props} from "../../types";
 import {BlackBox} from "../BlackBox/BlackBox";
 import React, {useRef} from "react";
 

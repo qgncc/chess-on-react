@@ -3,8 +3,8 @@ import {WaitingScreen} from "../WaitngScreen/WaitingScreen";
 import {useParams} from "react-router";
 import { useLocation } from "react-router-dom";
 import { useCallback, useEffect } from "react";
-import { useChessGameManager } from "../hooks/useChessGameManager";
-import { Color } from "../types";
+import { useChessGameManager } from "../../hooks/useChessGameManager";
+import { Color } from "../../types";
 import { VictoryPrompt } from "../VictoryPrompt/VictoryPrompt"
 
 interface LobbyProps{
