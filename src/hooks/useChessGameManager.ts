@@ -1,7 +1,7 @@
 import { ShortMove } from "chess.js";
 import { useCallback, useRef, useState } from "react";
 import { AlgebraicNotation, SquareObject, Color, AlgebraicMove } from "../types";
-import { DropEvent, PickEvent } from "../ChessBoard/ChessBoard";
+import { DropEvent, PickEvent } from "../components/ChessBoard/ChessBoard";
 import { useChessLogic } from "./useChessLogic";
 import { useWebSocket } from "./useWebSocket";
 import sound from "../utils/chessGameSoundsPlayer";
@@ -111,13 +111,11 @@ export function useChessGameManager(url: string, color?: Color){
         ws.sendMessageJSON({type:"create_room", roomID});
     }, [ws])
     
-
     const updateBoard = useCallback((move: AlgebraicMove) => {
         
         const result = updatePositon(move)
         if(!roomID.current) throw new Error("No roomID")
         if(result) {
-            sendMove(roomID.current, move)
             setHighlightedSquares({
                 [move.from]: HIGHLIGHT_SQUARE_COLOR,
                 [move.to]: HIGHLIGHT_SQUARE_COLOR,
@@ -138,7 +136,16 @@ export function useChessGameManager(url: string, color?: Color){
             }
             return false
         }
-    }, [updatePositon, sendMove, setHighlightedSquares, setSelectedPieceSquare])
+    }, [updatePositon, inCheck, side, turn, setHighlightedSquares, setSelectedPieceSquare])
+
+    const makeMove = useCallback((move: AlgebraicMove) => {
+        let result = updateBoard(move);
+        if(!roomID.current) throw new Error("No roomID")
+        if(result) sendMove(roomID.current, move);
+        return result;
+
+    }, [updateBoard, sendMove])
+
     
     //-----------------CALLBACKS
     function onPick(event: PickEvent) {
@@ -170,7 +177,7 @@ export function useChessGameManager(url: string, color?: Color){
             return false
         }
         
-        return updateBoard(newMove);
+        return makeMove(newMove);
     }
     function onPromotion(
         isCancled: boolean, 
@@ -180,7 +187,7 @@ export function useChessGameManager(url: string, color?: Color){
             if(!promotionSquares.current) throw new Error("No promotion squares!");
             const {squareFrom: from, squareTo: to} = promotionSquares.current
             const newMove = {from:from.algebraic, to: to.algebraic, promotion: piece?.type}
-            updateBoard(newMove)
+            makeMove(newMove)
             promotionPawn.current = null
         }else{
             promotionPawn.current && (promotionPawn.current.style.display = "block")
@@ -206,7 +213,7 @@ export function useChessGameManager(url: string, color?: Color){
         sendMove,
         sendRematchReq,
         onPick: useCallback(onPick, []),
-        onDrop: useCallback(onDrop, [ checkIfPromotion, side, turn, updateBoard]),
-        onPromotion: useCallback(onPromotion, [updateBoard]),
+        onDrop: useCallback(onDrop, [ checkIfPromotion, side, turn, makeMove]),
+        onPromotion: useCallback(onPromotion, [makeMove]),
     }
 }
