@@ -1,13 +1,19 @@
 ## Chess on react
->[Live-demo](http://chess.qgncc.com) (might not work if my home server is down)
+>[Live-demo](http://chess.qgncc.com)
 + Stack: HTML/SCSS/TypeScript React
-+ [chess.js](https://github.com/jhlywa/chess.js) for game logic    
++ [chess.js](https://github.com/jhlywa/chess.js) для игровой логики
+
+
+
+### Backend
+- [Микросервис авторизации](https://github.com/qgncc/chess-auth)
+- [Микросервис шахмат](https://github.com/qgncc/chess-game)
+
 
 ### TODO:
-+ ~Ping for WebSocket~ ✓
 + Draw by agreement
 + Surrender button
 + Timer
-+ Sound effect
-+ Reconnection
++ ~Sound effects~ ✓
++ ~Reconnection~ ✓
 + ~Highlight of previous move and selected piece~ ✓

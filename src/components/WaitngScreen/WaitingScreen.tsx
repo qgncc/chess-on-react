@@ -24,7 +24,7 @@ export function WaitingScreen(props:WaitingScreenProps) {
             <h1>The room has been created! Here is the invitation link: </h1>
             <div className="link_box">
                 <input ref={ref}
-                       value={props.roomID?"http://chess.qgncc.com/"+props.roomID:""}
+                       value={props.roomID?"https://chess.qgncc.com/"+props.roomID:""}
                        type="text"
                        disabled={true}
                        className="link_box__url"/>

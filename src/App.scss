@@ -1,10 +1,20 @@
 @use "theme.scss" as theme;
+@use "components/base.scss";
 
 .wrapper{
   display: flex;
   align-items: center;
-  justify-content: center;
+  flex-direction:  row;
   height: 100vh;
   background-color: theme.$dark_bg;
   background-image: url("./img/background.svg");
+  
+  &__sidebar{
+    width: 10%;
+    min-width: 100px;
+  }
+  &__main{
+    width: 90%;
+  }
+ 
 }

@@ -7,15 +7,14 @@ import { useWebSocket } from "./useWebSocket";
 import sound from "../utils/chessGameSoundsPlayer";
 
 type IncomingMessage = {type: "move", move: string} 
-                        |{type: "game_joined", side: Color, roomID: string} 
-                        |{type: "game_created", roomID: string} 
-                        |{type: "game_started", side: Color} 
-                        |{type: "game_ended", reason: string}
+                        |{type: "room_joined", side: Color, roomId: string} 
+                        |{type: "room_created", roomId: string} 
+                        |{type: "start_game", side: Color} 
+                        |{type: "end_game", reason: string}
                         |{type: "error", errorID: number}
 type OutgoingMessage = {type: "move", move: string, side: Color}
                         |{type: "create_room", side?:Color}
-                        |{type: "join_room", roomID:string}
-                        |{type: "game_ended", reason: string}
+                        |{type: "join_room", roomId:string}
 
 export type UpdateBoardFunc = (move: ShortMove)=>boolean
 
@@ -33,11 +32,14 @@ function objectMoveToString(move: ShortMove) {
     return move.from+move.to+promotion
 }
 
-export function useChessGameManager(url: string, color?: Color){
+const wsURL = process.env.NODE_ENV === "development"?
+        "ws://localhost:8081/ws":"wss://chess.qgncc.com/ws/"
+
+export function useChessGameManager(color?: Color){
     const HIGHLIGHT_SQUARE_COLOR = "#ffff00";
     const [side, setSide] = useState<Color|any>(color);
     const {position, checkIfPromotion,  updatePositon, turn, reset, inCheck} = useChessLogic();
-    const roomID =  useRef<string|null>(null)
+    const roomId =  useRef<string|null>(null)
 
     const promotionPawn = useRef<HTMLDivElement|null>(null)
     const promotionSquares = useRef<{squareFrom:SquareObject, squareTo: SquareObject}|null>(null)
@@ -48,27 +50,27 @@ export function useChessGameManager(url: string, color?: Color){
     const [gameStatus, setGameStatus] = useState<"joined"|"started"|"ended"|"created">("created")
     const [isConnected, setIsConnected] = useState<boolean>(false)
     
-    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(url, onMessage, {onClose, onOpen, shouldReconnect: true, exponentialBackOff: true})
+    const ws = useWebSocket<IncomingMessage, OutgoingMessage>(wsURL+"create_game", onMessage, {onClose, onOpen, shouldReconnect: true, exponentialBackOff: true})
 
     
     function onMessage(message: IncomingMessage) {
         console.log(message);
         switch (message.type) {
-            case "game_created":
+            case "room_created":
                 setGameStatus("created")
-                joinRoom(message.roomID, side);
+                joinRoom(message.roomId, side);
                 break;
-            case "game_started":
+            case "start_game":
                 console.log("game_started")
                 startGame(message.side)
                 break;
-            case "game_joined":
+            case "room_joined":
                 setGameStatus("joined");
                 setSide(message.side);
-                console.log(message.roomID)
-                roomID.current = message.roomID
+                console.log(message.roomId)
+                roomId.current = message.roomId
                 break;
-            case "game_ended":
+            case "end_game":
                 setGameStatus("ended")
                 sound.play("gameEnded")
                 break;
@@ -98,23 +100,23 @@ export function useChessGameManager(url: string, color?: Color){
     
 
 
-    const sendRematchReq = useCallback((roomID: string) => {
-        ws.sendMessageJSON({type:"rematch_request", side, roomID})
+    const sendRematchReq = useCallback((roomId: string) => {
+        ws.sendMessageJSON({type:"rematch_request", side, roomId})
     }, [side, ws])    
-    const joinRoom =  useCallback((roomID: string, side?: Color) => {
-        ws.sendMessageJSON({type:"join_room", roomID, side})
+    const joinRoom =  useCallback((roomId: string, side?: Color) => {
+        ws.sendMessageJSON({type:"join_room", roomId, side,  playerId:"1"})
     }, [ws])
-    const sendMove = useCallback((roomID: string, move: AlgebraicMove) => {
-        ws.sendMessageJSON({type:"move", roomID, move: objectMoveToString(move), side});
+    const sendMove = useCallback((roomId: string, move: AlgebraicMove) => {
+        ws.sendMessageJSON({type:"move", roomId, move: objectMoveToString(move), side});
     }, [ws, side])
-    const createRoom = useCallback((roomID: string) => {
-        ws.sendMessageJSON({type:"create_room", roomID});
+    const createRoom = useCallback((roomId: string) => {
+        ws.sendMessageJSON({type:"create_room", roomId});
     }, [ws])
     
     const updateBoard = useCallback((move: AlgebraicMove) => {
         
         const result = updatePositon(move)
-        if(!roomID.current) throw new Error("No roomID")
+        if(!roomId.current) throw new Error("No roomId")
         if(result) {
             setHighlightedSquares({
                 [move.from]: HIGHLIGHT_SQUARE_COLOR,
@@ -140,8 +142,8 @@ export function useChessGameManager(url: string, color?: Color){
 
     const makeMove = useCallback((move: AlgebraicMove) => {
         let result = updateBoard(move);
-        if(!roomID.current) throw new Error("No roomID")
-        if(result) sendMove(roomID.current, move);
+        if(!roomId.current) throw new Error("No roomId")
+        if(result) sendMove(roomId.current, move);
         return result;
 
     }, [updateBoard, sendMove])

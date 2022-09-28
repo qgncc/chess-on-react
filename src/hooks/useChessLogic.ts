@@ -1,7 +1,6 @@
 import { ShortMove } from "chess.js";
 import {useRef, useCallback, useState} from "react"
 import { AlgebraicMove, Color, SquareObject } from "../types";
-
 const Chess = require("chess.js");
 export function useChessLogic() {
     const chessRef = useRef(Chess());

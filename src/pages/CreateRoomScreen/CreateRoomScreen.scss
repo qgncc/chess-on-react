@@ -1,36 +1,4 @@
-.button {
-  border: 0;
-  display: block;
-  width: 200px;
-  height: 75px;
-  cursor: pointer;
-  background-color: #5b8632;
-  color: #fff;
-  font-family: Comfortaa, sans-serif;
-  text-decoration: none;
-  &--blocked{
-    background-color: #232323;
-    color: #484848;
-  }
-  &.button--blocked:hover{
-    cursor: inherit;
-    background-color: #232323;
-    color:#484848;
-  }
-  &--margin--15{
-    margin: 15px;
-  }
-  &--corners--rounded{
-    border-radius: 0.5rem;
-  }
-  &:hover {
-    background-color: #507729;
-  }
 
-  &:active {
-    border: 3px #3a561f solid;
-  }
-}
 .any{
   background-image: url("../../img/any.png");
 }

@@ -1,33 +1,48 @@
 import "./App.scss";
-import {CreateRoomScreen} from "./components/CreateRoomScreen/CreateRoomScreen";
+import {CreateRoomScreen} from "./pages/CreateRoomScreen/CreateRoomScreen";
 import {
     Routes,
     Route, useNavigate,
 } from "react-router-dom";
-import {Lobby} from "./components/Lobby/Lobby";
-const Chess = require("chess.js");
+import {Lobby} from "./pages/Lobby/Lobby";
+import AuthScreen from "./pages/AuthScreen";
+import { RootState } from "./redux/store";
+import { useSelector } from "react-redux";
+import Sidebar from "./components/Sidebar";
+import Main from "./components/Main";
+import Registration from "./pages/Registration";
 
 
 
 const host = process.env.NODE_ENV === "development"?"ws://localhost:8081/ws":"wss://chess.qgncc.com/ws";
-const chess = Chess();
 
 function App() {
-    const navigate = useNavigate();
-    
+    const isLoggedIn = useSelector<RootState, boolean>((state)=>state.auth.isLoggedIn)
+
+
     return (
         <div className = "wrapper">
-                <Routes>
-                    <Route path={":roomID"}
-                           element={
-                            <Lobby/>}
-                    />
-                    <Route path={"/"}
-                           element={
-                            <CreateRoomScreen
-                            />}
-                    />
-                </Routes>
+                <Sidebar/>
+                <Main>
+                    <Routes>
+                        <Route path={"/"}
+                            element={
+                                <AuthScreen/>}
+                        />
+                        <Route path={"/registration"}
+                            element={
+                                <Registration/>}
+                        />
+                        <Route path={"/play"}
+                            element={
+                                <CreateRoomScreen/>}
+                        />
+                        <Route path={":roomID"}
+                            element={
+                                <Lobby/>}
+                        />
+                    </Routes>
+                </Main>
                
         </div>
     );

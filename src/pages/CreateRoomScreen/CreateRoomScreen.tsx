@@ -1,19 +1,21 @@
 import "./CreateRoomScreen.scss"
-import {Color, Props} from "../../types";
-import {BlackBox} from "../BlackBox/BlackBox";
-import {Link, useNavigate} from "react-router-dom";
+import { Color, Props } from "../../types";
+import { BlackBox } from "../../components/BlackBox/BlackBox";
+import { useNavigate } from "react-router-dom";
 import { v4 } from 'uuid';
 import {ChangeEvent, MouseEvent, useEffect, useState} from "react";
+import useAuthRedirect from "../../hooks/useAuthRedirect";
 
 interface CreateRoomScreenProps extends Props{
 }
 export function CreateRoomScreen(props: CreateRoomScreenProps) {
-    let className = props.className? props.className:"";
     let [checked, setChecked] = useState<Color|"any">("any");
     const navigate = useNavigate();
     function onChange(event: ChangeEvent<HTMLDivElement>) {
         setChecked(event.target.id as Color|"any");
     }
+    useAuthRedirect()
+
     function onClick(event:MouseEvent<HTMLButtonElement>){
         let color;
         if(checked === "any"){
@@ -27,7 +29,7 @@ export function CreateRoomScreen(props: CreateRoomScreenProps) {
         navigate("../"+roomID, { replace: true, state: {isRoomCreator: true, color}});
     }
     return(
-        <BlackBox className={className}>
+        <BlackBox>
             <form action="" className="options">
                 <input checked={checked === "any"}
                        type="radio"
